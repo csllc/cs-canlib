@@ -96,12 +96,10 @@ module.exports = class Canlib extends Duplex {
       resolve();
     })
       .then(function() {
-        // Close event handler
-        me.on('close', function() { // todo - do we really need function wrap?
-          me.close();
-        });
+        // Set up handler for 'close' event
+        me.on('close', () => { me.close(); });
 
-        // Data receive event handler
+        // Set up handler for data receive event
         me.on('_data', me._onData.bind(me));
         
         // Enable data event
@@ -143,7 +141,6 @@ module.exports = class Canlib extends Duplex {
 
       if (me.isOpen()) {
         // Close event thread
-        // TODO: verify that the channel goes off bus and all that
         canlib.DisableEvent(me.channel);
 
         // Take the main thread's handle off-bus
@@ -242,11 +239,8 @@ module.exports = class Canlib extends Duplex {
     let me = this;
 
     // Set baud
-    canlib.SetBusParams(me.handle, { freq: 250000,
-                                     tseg1: 11,
-                                     tseg2: 4,
-                                     sjw: 4,
-                                     noSamp: 3 } );
+    canlib.SetBusParams(me.handle,
+                        canlib.TranslateBaud(me.options.canRate));
 
     // Set filters
     if (me.options.filters.length > 0) {
