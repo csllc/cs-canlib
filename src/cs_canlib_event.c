@@ -52,7 +52,6 @@ int canlibThreadHandle = 0;
 // Mutex for worker thread's CAN interface handle, shared by main and worker thread
 HANDLE canlibThreadHandleMutex = INVALID_HANDLE_VALUE;
 
-// TODO: Clean up mutex object
 
 
 
@@ -410,7 +409,7 @@ int canlibEventEnable(int canlibChannel, int canlibFlags, void *callback)
         // canlibThreadEvent was signaled, and the mutex was released
     }
 
-    return canlibThreadHandle; // TODO: Negative values are returned on failure
+    return canlibThreadHandle;
 }
 
 
@@ -512,8 +511,8 @@ int canlibEventDisable(void)
 void canlibDumpThreadParameters(threadParameters_t *threadParameters)
 {
     printf("threadParameters {\n"
-           "  canChannel  = 0x%02X\n"
-           "  canFlags = 0x%02X\n"
+           "  canChannel  = %i\n"
+           "  canFlags    = 0x%02X\n"
            "  callback    = 0x%p\n"
            "}\n",
            threadParameters->canChannel,
