@@ -3,6 +3,124 @@
 #include <canlib.h>
 #include <canstat.h>
 
+typedef struct threadParamters_s {
+    int channel;
+    int flags;
+} threadParameters_t;
+
+
+
+DWORD WINAPI eventThreadProc(void* lpParams)
+{
+    int i;
+    long id;
+    BYTE msg[8];
+    unsigned int dlc;
+    unsigned int flag;
+    unsigned int time;
+
+    canStatus canlibStatus;
+
+    int canlibHandleThread;
+    int canlibChannel;
+    int canlibFlags;
+
+    canlibChannel = ((threadParameters_t*)lpParams)->channel;
+    canlibFlags = ((threadParameters_t*)lpParams)->flags;
+
+    HANDLE canlibEventHandle;
+
+    printf("eventThreadProc running\n");
+
+    canlibHandleThread = canOpenChannel(canlibChannel, canlibFlags);
+    printf("canOpenChannel:\n"
+           "  canlibHandleThread  = 0x%02X\n"
+           "  canlibChannel       = 0x%02X\n"
+           "  canlibFlags         = 0x%02X\n",
+           canlibHandleThread,
+           canlibChannel,
+           canlibFlags);
+
+    canlibStatus = canBusOn(canlibHandleThread);
+    printf("canBusOn:\n"
+           "  canlibHandleThread = 0x%02X\n"
+           "  canlibStatus = %i\n",
+           canlibHandleThread,
+           canlibStatus);
+
+    canlibStatus = canIoCtl(canlibHandleThread,
+                            canIOCTL_GET_EVENTHANDLE,
+                            &canlibEventHandle,
+                            sizeof(canlibEventHandle));
+
+    printf("canIoCtl:\n"
+           "  canlibEventHandle = 0x%p\n",
+           canlibEventHandle);
+
+    BYTE echoMode = 0;
+    
+    canIoCtl(canlibHandleThread,
+             canIOCTL_SET_LOCAL_TXECHO,
+             &echoMode,
+             sizeof(echoMode));
+
+    while (1)
+    {
+        printf("waiting for event...\n");
+        canlibStatus = WaitForSingleObject(canlibEventHandle, INFINITE);
+
+        if (canlibStatus == canOK)
+        {
+            while (canlibStatus != canERR_NOMSG)
+            {
+                canlibStatus = canRead(canlibHandleThread,
+                                       &id,
+                                       &msg,
+                                       &dlc,
+                                       &flag,
+                                       &time);
+
+                if (canlibStatus == canOK)
+                {
+                    printf("canRead:\n"
+                           "  canlibHandleThread = 0x%02X\n"
+                           "  canlibStatus = %i\n"
+                           "  id   = 0x%02X\n"
+                           "  dlc  = 0x%02X\n"
+                           "  flag = 0x%02X\n"
+                           "  time = 0x%02X\n"
+                           "  msg  = ",
+                           canlibHandleThread,
+                           canlibStatus,
+                           id,
+                           dlc,
+                           flag,
+                           time);
+
+                    for (i = 0; i < dlc; i++)
+                    {
+                        printf("0x%02X ", msg[i]);
+                    }
+                    printf("\n");
+                }
+                else
+                {
+                    printf("canRead: canlibStatus = %i\n", canlibStatus);
+                }
+            }
+        }
+        else
+        {
+            printf("canWaitForEvent: 0x%02X\n", canlibStatus);
+        }
+    }
+
+    return 0;
+}
+
+
+
+
 int main(void)
 {
     int status;
@@ -10,18 +128,18 @@ int main(void)
 
     canInitializeLibrary();
 
+    int canlibHandle = 0;
     int canlibChannel = 0;
     int canlibFlags = 0;
 
-    status = canOpenChannel(canlibChannel, canlibFlags);
+    canlibHandle = canOpenChannel(canlibChannel, canlibFlags);
     printf("canOpenChannel:\n"
-           "  status        = 0x%02X\n"
+           "  canlibHandle  = 0x%02X\n"
            "  canlibChannel = 0x%02X\n"
            "  canlibFlags   = 0x%02X\n",
-           status,
+           canlibHandle,
            canlibChannel,
            canlibFlags);
-
 
     long freq;
     unsigned int tseg1;
@@ -30,7 +148,7 @@ int main(void)
     unsigned int noSamp;
     unsigned int syncmode;
 
-    canlibStatus = canGetBusParams(0,
+    canlibStatus = canGetBusParams(canlibHandle,
                                    &freq,
                                    &tseg1,
                                    &tseg2,
@@ -39,13 +157,15 @@ int main(void)
                                    &syncmode);
 
     printf("canGetBusParams:\n"
+           "  canlibHandle = 0x%02X\n"
            "  canlibStatus = %i\n"
-           "  freq = %i\n"
-           "  tseg1 = 0x%02X\n"
-           "  tseg2 = 0x%02X\n"
-           "  sjw = 0x%02X\n"
-           "  noSamp = 0x%02X\n"
-           "  syncmode = 0x%02X\n",
+           "  freq         = %i\n"
+           "  tseg1        = 0x%02X\n"
+           "  tseg2        = 0x%02X\n"
+           "  sjw          = 0x%02X\n"
+           "  noSamp       = 0x%02X\n"
+           "  syncmode     = 0x%02X\n",
+           canlibHandle,
            canlibStatus,
            freq,
            tseg1,
@@ -61,7 +181,7 @@ int main(void)
     noSamp = 0x03;
     syncmode = 0;
 
-    canlibStatus = canSetBusParams(0,
+    canlibStatus = canSetBusParams(canlibHandle,
                                    freq,
                                    tseg1,
                                    tseg2,
@@ -69,13 +189,15 @@ int main(void)
                                    noSamp,
                                    syncmode);
     printf("canSetBusParams:\n"
+           "  canlibHandle = 0x%02X\n"
            "  canlibStatus = %i\n"
-           "  freq = %i\n"
-           "  tseg1 = 0x%02X\n"
-           "  tseg2 = 0x%02X\n"
-           "  sjw = 0x%02X\n"
-           "  noSamp = 0x%02X\n"
-           "  syncmode = 0x%02X\n",
+           "  freq         = %i\n"
+           "  tseg1        = 0x%02X\n"
+           "  tseg2        = 0x%02X\n"
+           "  sjw          = 0x%02X\n"
+           "  noSamp       = 0x%02X\n"
+           "  syncmode     = 0x%02X\n",
+           canlibHandle,
            canlibStatus,
            freq,
            tseg1,
@@ -84,78 +206,57 @@ int main(void)
            noSamp,
            syncmode);
 
-    canlibStatus = canBusOn(0);
+    canlibStatus = canBusOn(canlibHandle);
     printf("canBusOn:\n"
+           "  canlibHandle = 0x%02X\n"
            "  canlibStatus = %i\n",
+           canlibHandle,
            canlibStatus);
 
-    int i;
-    long id;
-    BYTE msg[8];
-    unsigned int dlc;
-    unsigned int flag;
-    unsigned int time;
+    threadParameters_t threadParameters = {
+        canlibChannel,
+        canlibFlags
+    };
 
+    int canlibEventThreadId;
+    HANDLE canlibEventThread;
     
-    HANDLE canlibEventHandle;
+    canlibEventThread = CreateThread(0,
+                                     0,
+                                     eventThreadProc,
+                                     &threadParameters,
+                                     0,
+                                     &canlibEventThreadId);
 
-    canlibStatus = canIoCtl(0,
-                            canIOCTL_GET_EVENTHANDLE,
-                            &canlibEventHandle,
-                            sizeof(canlibEventHandle));
+    int canlibId = 1234;
+    BYTE canlibMsg[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    int canlibDlc = 8;
+    int canlibFlag = 0x04;
 
-    printf("canIoCtl:\n"
-           "  canlibEventHandle = 0x%p\n",
-           canlibEventHandle);
+    while (1) {
+        canlibStatus = canWrite(canlibHandle,
+                                canlibId,
+                                canlibMsg,
+                                canlibDlc,
+                                canlibFlag);
+        printf("canWrite:\n"
+               "  canlibStatus = %i\n"
+               "  canlibHandle = 0x%02X\n"
+               "  canlibId     = 0x%02X\n"
+               "  canlibMsg    = {...}\n"
+               "  canlibDlc    = 0x%02X\n"
+               "  canlibFlag   = 0x%02X\n",
+               canlibStatus,
+               canlibHandle,
+               canlibId,
+               canlibDlc,
+               canlibFlag);
 
-
-    while (1)
-    {
-        printf("waiting for event...\n");
-        canlibStatus = WaitForSingleObject(canlibEventHandle, INFINITE);
-
-        if (canlibStatus == canOK)
-        {
-            while (canlibStatus != canERR_NOMSG)
-            {
-                canlibStatus = canRead(0,
-                                       &id,
-                                       &msg,
-                                       &dlc,
-                                       &flag,
-                                       &time);
-
-                if (canlibStatus == canOK)
-                {
-                    printf("canRead:\n"
-                           "  canlibStatus = %i\n"
-                           "  id   = 0x%02X\n"
-                           "  dlc  = 0x%02X\n"
-                           "  flag = 0x%02X\n"
-                           "  time = 0x%02X\n"
-                           "  msg  = ",
-                           canlibStatus,
-                           id,
-                           dlc,
-                           flag,
-                           time);
-
-                    for (i = 0; i < dlc; i++)
-                    {
-                        printf("0x%02X ",
-                               msg[i]);
-                    }
-                    printf("\n");
-                }
-                else
-                {
-                    printf("canRead: canlibStatus = %i\n", canlibStatus);
-                }
-            }
-        } else {
-            printf("canWaitForEvent: 0x%02X\n", canlibStatus);
-        }
-    }
+        Sleep(500);
+    };
 
     return 0;
 }
+
+
+

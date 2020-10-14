@@ -24,8 +24,9 @@ module.exports = class Canlib extends Duplex {
 
     this.setOptions(options);
     this.requestQueue = [];
-    this.port = undefined;
-    this.port_thread = undefined;
+    this.channel = undefined
+    this.handle = undefined;
+    this.handle_thread = undefined;
     this.isReady = false;
     this.handle = null;
     this.flags = 0;
@@ -70,18 +71,21 @@ module.exports = class Canlib extends Duplex {
       });
   }
 
-  open(port) { 
+  open(channel) { 
     var me = this;
 
     return new Promise(function(resolve) {
-      // Open the CAN port (aka "channel") with a given handle
-      me.handle = canlib.OpenChannel(port, me.flags);
+      // Open the CAN channel and save the handle
+      me.handle = canlib.OpenChannel(channel, me.flags);
 
-      // Save port (channel) for posterity
-      me.port = port;
+      // Save channel for posterity
+      me.channel = channel;
 
-      // Set channel baud and filter (if any)
+      // Set channel baud and filter (if specified)
       me._configure();
+
+      // Go on-bus
+      canlib.BusOn(me.handle);
 
       me.isReady = true;
       me.emit('open');
@@ -97,13 +101,13 @@ module.exports = class Canlib extends Duplex {
         me.on('_data', me._onData.bind(me));
         
         // Enable data event
-        me.port_thread = canlib.EnableEvent(port, me.flags, function() {
-          me.emit('_data');
-        });
+        // me.handle_thread = canlib.EnableEvent(me.channel, me.flags, function() {
+        //   me.emit('_data');
+        // });
       })
       .then(function() {
-        canlib.FlushTransmitQueue(port);
-        canlib.FlushReceiveQueue(port);
+        canlib.FlushTransmitQueue(me.handle);
+        canlib.FlushReceiveQueue(me.handle);
       })
       .catch(function(err) {
         me.emit('error', err);
@@ -119,9 +123,9 @@ module.exports = class Canlib extends Duplex {
       me.removeAllListeners();
 
       if (me.isOpen()) {
-        canlib.DisableEvent(me.port);
-        canlib.BusOff(me.port);
-        canlib.Close(me.port);
+        //canlib.DisableEvent(me.channel);
+        canlib.BusOff(me.handle);
+        canlib.Close(me.handle);
       }
 
       // Close stream
@@ -129,8 +133,8 @@ module.exports = class Canlib extends Duplex {
       resolve();
     })
       .then(function() {
-        me.port = undefined;
-        me.port_thread = undefined;
+        me.handle = undefined;
+        me.handle_thread = undefined;
         me.isReady = false;
         me.push(null);
       })
@@ -146,16 +150,22 @@ module.exports = class Canlib extends Duplex {
     return new Promise(function(resolve) {
       if (msg.buf.length <= 8) {
 
+        // Check params
+        let params = canlib.GetBusParams(me.handle);
+        console.log(params);
+
         // Write message to bus
         let canlibMsg = canlibConsts.toCanlibMsg(msg);
-        canlib.Write(me.port_thread, canlibMsg);
+        console.log(me.handle);
+        console.log(canlibMsg);
+        canlib.Write(me.handle, canlibMsg);
         me.emit('write', msg);
 /*
         // If loopback is enabled, push message back into receive stream
         if (me.options.loopback) {
           me.push(tpcan.toMsg(tpcan_buffer));
         }
-*/
+*/       
         resolve();
       } else {
         throw new Error("Tried to send invalid CAN data");
@@ -171,7 +181,7 @@ module.exports = class Canlib extends Duplex {
     let me = this;
 
     return new Promise(function(resolve) {
-      let status = canlib.Status(me.port);
+      let status = canlib.Status(me.handle);
       resolve(status);
     })
       .catch(function(err) {
@@ -182,8 +192,8 @@ module.exports = class Canlib extends Duplex {
 
   // Required function for cs-modbus GenericConnection
   isOpen() {
-    return ((this.port != undefined) &&
-            (this.port_thread != undefined) &&
+    return ((this.handle != undefined) &&
+            (this.handle_thread != undefined) &&
             (this.isReady));
   }
 
@@ -193,11 +203,12 @@ module.exports = class Canlib extends Duplex {
   }
 
   _onData() {
+    console.log("_onData: pid " + process.pid);
     let me = this;
     
     for (;;) {
       try {
-        let read_obj = canlib.Read(me.port_thread);
+        let read_obj = canlib.Read(me.handle_thread);
         me.push(read_obj); // Emits 'data' event
       } catch(err) {
         if (err.code != "No messages available") {
@@ -217,55 +228,19 @@ module.exports = class Canlib extends Duplex {
   _configure() {
     let me = this;
 
-    // Set filters
-    if (me.options.filters.length > 0) {
-      // Ensure extended/standard filters aren't being mixed, because this
-      // isn't supported by the hardware.
-      let ext_option = me.options.filters[0].ext;
-
-      for (let i in me.options.filters) {
-        if (me.options.filters[i].ext != ext_option) {
-          throw new Error("CANlib does not support mixing extended and standard filters.");
-        }
-      }
-      
-/*
-      for (let i in me.options.filters) {
-        if ((me.options.filters[i].code) && (me.options.filters[i].mask)) {
-          if (me.options.filters[i].ext) {
-            pcan.AcceptanceFilter29Bit(me.port, me.options.filters[i].code,
-                                       me.options.filters[i].mask);
-          } else {
-            pcan.AcceptanceFilter11Bit(me.port, me.options.filters[i].code,
-                                       me.options.filters[i].mask);
-          }
-        } else if ((me.options.filters[i].fromID) && (me.options.filters[i].toID)){
-
-          pcan.FilterMessages(me.port, me.options.filters[i].fromID,
-                              me.options.filters[i].toID, 0x02);
-
-        } else if (me.options.filters[i].id) {
-
-          // Split start/stop range and convert them to acceptance code + mask
-          let fromID = parseInt(me.options.filters[i].id.split(' ')[0], 16);
-          let toID = parseInt(me.options.filters[i].id.split(' ')[1], 16);
-
-          pcan.FilterMessages(me.port, fromID, toID, 0x02);
-
-        } else {
-          throw new Error("Unknown or unspecified filter format.");
-        }
-      }
-*/
-    }
-
     // Set baud
-        canlib.SetBusParams(me.handle, {
-          freq: 250000,
-          tseg1: 11,
-          tseg2: 4,
-          sjw: 4,
-          noSamp: 3});
+    canlib.SetBusParams(me.handle, { freq: 250000,
+                                     tseg1: 11,
+                                     tseg2: 4,
+                                     sjw: 4,
+                                     noSamp: 3 } );
+
+    // Set filters
+    if (me.options.filters.length > 0) { }
   }
+
+
 }
+
+
 

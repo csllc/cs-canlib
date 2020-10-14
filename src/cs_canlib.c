@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 #include <windows.h>     // provide Win32 types, constants, and functions
+#include <processthreadsapi.h>
 
 #include <canlib.h>
 #include <canstat.h>
@@ -26,7 +27,7 @@
 // Definitions
 
 // Length of N-API module descriptor list, used in Init
-enum { descriptors_len = 17 };
+enum { descriptors_len = 18 };
 
 
 
@@ -83,6 +84,7 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
         DECLARE_NAPI_METHOD("TranslateBaud", canlib_canTranslateBaud),
         DECLARE_NAPI_METHOD("SetBusParams", canlib_canSetBusParams),
+        DECLARE_NAPI_METHOD("GetBusParams", canlib_canGetBusParams),
         DECLARE_NAPI_METHOD("FlushTransmitQueue", canlib_canFlushTransmitQueue),
         DECLARE_NAPI_METHOD("FlushReceiveQueue", canlib_canFlushReceiveQueue),
         // Additional functions
@@ -188,35 +190,35 @@ napi_value canlib_canOpenChannel(napi_env env, napi_callback_info info)
     assert(status == napi_ok);
 
     // Open CAN channel
-    int32_t canlibStatus;
-    canlibStatus = canOpenChannel(canlibChannel, canlibFlags);
+    int32_t canlibHandle;
+    canlibHandle = canOpenChannel(canlibChannel, canlibFlags);
 
     // Print results to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canOpenChannel:\n"
-           "  canlibStatus  = 0x%02X (%s)\n"
+           "  canlibHandle  = 0x%02X (%s)\n"
            "  canlibChannel = 0x%02X\n"
            "  canlibFlags   = 0x%02X\n",
-           canlibStatus, canlibStatusLookup(canlibStatus),
+           canlibHandle, canlibStatusLookup(canlibHandle),
            canlibChannel,
            canlibFlags);
 #endif
 
     // Throw error, if any
-    if (canlibStatus < 0)
+    if (canlibHandle < 0)
     {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+        napi_throw_error(env, canlibStatusLookup(canlibHandle),
                          "canlib_canOpenChannel: Error at canOpenChannel.");
         return 0;
     }
 
-    // If all went well, canlibStatus is now the handle to the CAN channel.
+    // If all went well, we now have the handle to the open CAN channel.
     // Create an N-API value for it and return it.
-    napi_value canHandle;
-    status = napi_create_int32(env, canlibStatus, &canHandle);
+    napi_value handle;
+    status = napi_create_int32(env, canlibHandle, &handle);
     assert(status == napi_ok);
 
-    return canHandle;
+    return handle;
 }
 
 
@@ -881,7 +883,7 @@ napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
 
     // Print results to console
 #ifdef CANLIB_DEBUG
-    printf("canChannelInfo: %i channels found\n", canlibChannelCount);
+    printf("canlib_canChannelInfo: %i channels found\n", canlibChannelCount);
 #endif
 
     // Allocate array for channel types
@@ -915,7 +917,7 @@ napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
 #ifdef CANLIB_DEBUG
     for (i = 0; i < canlibChannelCount; i++)
     {
-        printf("canChannelInfo: canlibChannelTypes[%i] = %i\n",
+        printf("canlib_canChannelInfo: canlibChannelTypes[%i] = %i\n",
                i, canlibChannelTypes[i]);
     }
 #endif
@@ -1164,14 +1166,14 @@ napi_value canlib_canSetBusParams(napi_env env, napi_callback_info info)
 
     // Print the result to console
 #ifdef CANLIB_DEBUG
-    printf("canSetBusParams:\n"
+    printf("canlib_canSetBusParams:\n"
            "  canlibStatus  = 0x%02X (%s)\n"
-           "  canlibHandle = 0x%02X\n"
-           "  canlibFreq = %i\n"
-           "  canlibTseg1 = %i\n"
-           "  canlibTseg2 = %i\n"
-           "  canlibSjw = %i\n"
-           "  canlibNoSamp = %i\n",
+           "  canlibHandle  = 0x%02X\n"
+           "  canlibFreq    = %i\n"
+           "  canlibTseg1   = %i\n"
+           "  canlibTseg2   = %i\n"
+           "  canlibSjw     = %i\n"
+           "  canlibNoSamp  = %i\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibHandle,
            canlibFreq,
@@ -1197,6 +1199,116 @@ napi_value canlib_canSetBusParams(napi_env env, napi_callback_info info)
 }
 
 
+
+
+napi_value canlib_canGetBusParams(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANGETBUSPARAMS_ARGC;
+    napi_value argv[CANGETBUSPARAMS_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANGETBUSPARAMS_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
+                              "This implementation of canGetBusParams accepts 1 argument.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    // Create variables to receive parameters
+    long canlibFreq;
+    unsigned int canlibTseg1;
+    unsigned int canlibTseg2;
+    unsigned int canlibSjw;
+    unsigned int canlibNoSamp;
+    unsigned int canlibSyncmode;
+
+    // Retreive bus parameters
+    canStatus canlibStatus;
+    canlibStatus = canGetBusParams(canlibHandle,
+                                   &canlibFreq,
+                                   &canlibTseg1,
+                                   &canlibTseg2,
+                                   &canlibSjw,
+                                   &canlibNoSamp,
+                                   &canlibSyncmode);
+
+    // Print results to console
+#ifdef CANLIB_DEBUG
+    printf("canlib_canGetBusParams:\n"
+           "  canlibStatus   = %i (%s)\n"
+           "  canlibHandle   = 0x%02X\n"
+           "  canlibFreq     = %i\n"
+           "  canlibTseg1    = %i\n"
+           "  canlibTseg2    = %i\n"
+           "  canlibSjw      = %i\n"
+           "  canlibNoSamp   = %i\n"
+           "  canlibSyncmode = %i\n",
+           canlibStatus, canlibStatusLookup(canlibStatus),
+           canlibHandle,
+           canlibFreq,
+           canlibTseg1,
+           canlibTseg2,
+           canlibSjw,
+           canlibNoSamp,
+           canlibSyncmode);
+#endif
+
+    // Create N-API object to contain the results
+    napi_value params;
+    status = napi_create_object(env, &params);
+    assert(status == napi_ok);
+
+    // Create N-API values for each of the results and set them as properties of
+    // the container
+    napi_value freq;
+    status = napi_create_int32(env, canlibFreq, &freq);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, params, "freq", freq);
+    assert(status == napi_ok);
+
+    napi_value tseg1;
+    status = napi_create_int32(env, canlibTseg1, &tseg1);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, params, "tseg1", tseg1);
+    assert(status == napi_ok);
+
+    napi_value tseg2;
+    status = napi_create_int32(env, canlibTseg2, &tseg2);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, params, "tseg2", tseg2);
+    assert(status == napi_ok);
+
+    napi_value sjw;
+    status = napi_create_int32(env, canlibSjw, &sjw);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, params, "sjw", sjw);
+    assert(status == napi_ok);
+
+    napi_value noSamp;
+    status = napi_create_int32(env, canlibNoSamp, &noSamp);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, params, "noSamp", noSamp);
+    assert(status == napi_ok);
+
+    napi_value syncmode;
+    status = napi_create_int32(env, canlibSyncmode, &syncmode);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, params, "syncmode", syncmode);
+    assert(status == napi_ok);
+
+    return params;
+}
+    
 
 
 napi_value canlib_canFlushTransmitQueue(napi_env env, napi_callback_info info)

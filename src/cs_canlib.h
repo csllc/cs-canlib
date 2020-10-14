@@ -46,6 +46,7 @@
 #define CANCHANNELINFO_ARGC (0)
 #define CANTRANSLATEBAUD_ARGC (1)
 #define CANSETBUSPARAMS_ARGC (2)
+#define CANGETBUSPARAMS_ARGC (1)
 #define CANFLUSHTRANSMITQUEUE_ARGC (1)
 #define CANFLUSHRECEIVEQUEUE_ARGC (1)
 #define CANENABLEEVENT_ARGC (3)
@@ -90,6 +91,8 @@ napi_value canlib_canOpenChannel(napi_env env, napi_callback_info info);
 napi_value canlib_canClose(napi_env env, napi_callback_info info);
 
 napi_value canlib_canSetBusParams(napi_env env, napi_callback_info info);
+
+napi_value canlib_canGetBusParams(napi_env env, napi_callback_info info);
 
 napi_value canlib_canSetBusOutputControl(napi_env env, napi_callback_info info);
 

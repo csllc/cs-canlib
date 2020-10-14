@@ -8,7 +8,6 @@ let can = new canlib({
 
 can.list()
   .then((ports) => {
-    console.log(ports);
     return can.open(ports[0].path)
       .catch((err) => {
 	    console.error(err);
@@ -42,11 +41,3 @@ can.on('data', function(msg) {
   }));
 });
 
-
-can.on('open', function() {
-  console.log("on open");
-});
-
-can.on('close', function() {
-  console.log("on close");
-});
