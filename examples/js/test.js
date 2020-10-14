@@ -4,7 +4,12 @@ const canlib = require("../..");
 
 let can = new canlib({
   canRate: 250000,
-  loopback: false,
+  loopback: true,
+  filters: [{
+      ext: true,
+      id: '10EF8000 10EFFFFF',
+    }]
+
 });
 
 can.list()

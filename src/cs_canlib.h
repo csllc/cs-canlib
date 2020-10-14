@@ -20,6 +20,7 @@
 // This is required when compiling test programs that rely solely on the Win32
 // and PCAN-Basic APIs.
 
+//TODO: ^^ is this necessary?
 
 #ifndef CANLIB_NO_NAPI
 #include <node_api.h> // provide N-API types
@@ -49,9 +50,11 @@
 #define CANGETBUSPARAMS_ARGC (1)
 #define CANFLUSHTRANSMITQUEUE_ARGC (1)
 #define CANFLUSHRECEIVEQUEUE_ARGC (1)
+#define CANSETACCEPTANCEFILTER_ARGC (4)
 #define CANENABLEEVENT_ARGC (3)
 #define CANDISABLEEVENT_ARGC (1)
 #define CANSETLOOPBACK_ARGC (2)
+
 
 
 
@@ -115,6 +118,8 @@ napi_value canlib_canTranslateBaud(napi_env env, napi_callback_info info);
 napi_value canlib_canFlushTransmitQueue(napi_env env, napi_callback_info info);
 
 napi_value canlib_canFlushReceiveQueue(napi_env env, napi_callback_info info);
+
+napi_value canlib_canSetAcceptanceFilter(napi_env env, napi_callback_info info);
 
 napi_value canlib_canEnableEvent(napi_env env, napi_callback_info info);
 

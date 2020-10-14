@@ -75,21 +75,22 @@ module.exports = class Canlib extends Duplex {
     var me = this;
 
     return new Promise(function(resolve) {
-      // Open the CAN channel and save the handle
-      me.handle = canlib.OpenChannel(channel, me.flags);
-
       // Save channel for posterity
       me.channel = channel;
+      
+      // Open the CAN channel and save the main thread's handle
+      me.handle = canlib.OpenChannel(me.channel, me.flags);
 
       // Set channel baud and filter (if specified)
       me._configure();
 
-      // Set loopback (aka transmit echo)
+      // Set loopback (aka transmit echo) for main thread's handle
       canlib.SetLoopback(me.handle, me.options.loopback);
 
-      // Go on-bus
+      // Go on-bus with main thread's handle
       canlib.BusOn(me.handle);
 
+      // Signal that the channel has been opened
       me.isReady = true;
       me.emit('open');
       resolve();
@@ -104,16 +105,28 @@ module.exports = class Canlib extends Duplex {
         me.on('_data', me._onData.bind(me));
         
         // Enable data event
+        // - This opens a second handle to the channel and takes it on-bus
         me.handle_thread = canlib.EnableEvent(me.channel, me.flags, function() {
           me.emit('_data');
         });
 
         // Set loopback for the event thread's handle
         canlib.SetLoopback(me.handle_thread, me.options.loopback);
-      })
-      .then(function() {
-        canlib.FlushTransmitQueue(me.handle);
-        canlib.FlushReceiveQueue(me.handle);
+
+        // Set acceptance filter for the event thread's handle
+        if (me.options.filters.length > 0) {
+          for (let i in me.options.filters) {
+            try {
+              let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
+              canlib.SetAcceptanceFilter(me.handle_thread, filt.code,
+                                         filt.mask, filt.ext);
+            } catch (err) {
+              console.error(err);
+              throw new Error(err);
+            }
+          }
+        }
+
       })
       .catch(function(err) {
         me.emit('error', err);
@@ -129,8 +142,14 @@ module.exports = class Canlib extends Duplex {
       me.removeAllListeners();
 
       if (me.isOpen()) {
+        // Close event thread
+        // TODO: verify that the channel goes off bus and all that
         canlib.DisableEvent(me.channel);
+
+        // Take the main thread's handle off-bus
         canlib.BusOff(me.handle);
+
+        // Close the main thread's handle to the channel
         canlib.Close(me.handle);
       }
 
@@ -230,11 +249,19 @@ module.exports = class Canlib extends Duplex {
                                      noSamp: 3 } );
 
     // Set filters
-    if (me.options.filters.length > 0) { }
+    if (me.options.filters.length > 0) {
+      for (let i in me.options.filters) {
+        try {
+          let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
+          canlib.SetAcceptanceFilter(me.handle, filt.code, filt.mask, filt.ext);
+        } catch (err) {
+          console.error(err);
+          throw new Error(err);
+        }
+      }
+    }
   }
 
-
 }
-
 
 

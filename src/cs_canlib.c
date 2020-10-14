@@ -27,7 +27,7 @@
 // Definitions
 
 // Length of N-API module descriptor list, used in Init
-enum { descriptors_len = 19 };
+enum { descriptors_len = 20 };
 
 
 
@@ -86,6 +86,7 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("GetBusParams", canlib_canGetBusParams),
         DECLARE_NAPI_METHOD("FlushTransmitQueue", canlib_canFlushTransmitQueue),
         DECLARE_NAPI_METHOD("FlushReceiveQueue", canlib_canFlushReceiveQueue),
+        DECLARE_NAPI_METHOD("SetAcceptanceFilter", canlib_canSetAcceptanceFilter),
         // Additional functions
         DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
         DECLARE_NAPI_METHOD("EnableEvent", canlib_canEnableEvent),
@@ -1418,6 +1419,78 @@ napi_value canlib_canFlushReceiveQueue(napi_env env, napi_callback_info info)
 
     return result;
 }
+
+
+
+napi_value canlib_canSetAcceptanceFilter(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANSETACCEPTANCEFILTER_ARGC;
+    napi_value argv[CANSETACCEPTANCEFILTER_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANSETACCEPTANCEFILTER_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return -1;
+    }
+
+    // Retrieve or check arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    unsigned int canlibCode;
+    status = napi_get_value_uint32(env, argv[1], &canlibCode);
+    assert(status == napi_ok);
+
+    unsigned int canlibMask;
+    status = napi_get_value_uint32(env, argv[2], &canlibMask);
+    assert(status == napi_ok);
+
+    bool canlibIsExtended;
+    status = napi_get_value_bool(env, argv[3], &canlibIsExtended);
+    assert(status == napi_ok);
+
+    // Apply filter
+    canStatus canlibStatus;
+    canlibStatus = canSetAcceptanceFilter(canlibHandle, canlibCode,
+                                          canlibMask, canlibIsExtended);
+
+    // Print result to console
+#ifdef CANLIB_DEBUG
+    printf("canSetAcceptanceFilter:\n"
+           "  canlibHandle = 0x%02X\n"
+           "  canlibCode = 0x%08X\n"
+           "  canlibMask = 0x%08X\n"
+           "  canlibIsExtended = %i\n",
+           canlibHandle,
+           canlibCode,
+           canlibMask,
+           canlibIsExtended);
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canSetAcceptanceFilter: "
+                         "Error at canSetAcceptanceFilter.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_int32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+    
 
 
 
