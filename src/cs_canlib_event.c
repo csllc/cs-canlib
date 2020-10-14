@@ -1,3 +1,15 @@
+/* N-API interface for Kvaser CANlib
+
+   Functions that control the use of a Win32 event provided by the CANlib
+   library to signal that received data is available for reading. When enabled,
+   a worker thread is spawned that waits on this event and invokes a callback
+   function when its state changes to signaled, which presumably calls canread()
+   to retreive the newly received data.
+
+   Copyright (c) 2020 Control Solutions LLC. All rights reserved.
+*/
+
+
 #include <stdio.h>       // provide printf
 #include <windows.h>     // provide Win32 types, constants, and functions
 #include <canlib.h>      // provide CANlib API functions
@@ -9,6 +21,7 @@
 
 // ----------------------------------- // -----------------------------------
 // Definitions
+
 
 // Names used both in CreateEvent calls in main thread and OpenEvent calls
 // in worker thread
@@ -28,26 +41,33 @@ const char canlibThreadHandleMutexName[] = "canlibThreadHandleMutex";
 // ----------------------------------- // -----------------------------------
 // Local variables
 
+
 // Handle for CAN bus read event, signaled my main thread (CANlib API) when
 // a message has been received and waited on by worker thread
 HANDLE canlibEventRead = INVALID_HANDLE_VALUE;
+
 
 // Handle for worker thread spawn event, signaled by worker shortly after thread
 // starts and waited on by main thread
 HANDLE canlibEventSpawn = INVALID_HANDLE_VALUE;
 
+
 // Handle for worker thread exit event, signaled by main thread during exit
 // routine, and waited on by worker thread
 HANDLE canlibEventExit = INVALID_HANDLE_VALUE;
 
+
 // Worker thread handle, populated by canlibEventEnable
 HANDLE canlibThread = INVALID_HANDLE_VALUE;
+
 
 // Worker thread ID, populated by canlibEventEnable
 DWORD canlibThreadId = 0;
 
+
 // Worker thread's CAN interface handle, shared by main and worker thread
 int canlibThreadHandle = 0;
+
 
 // Mutex for worker thread's CAN interface handle, shared by main and worker thread
 HANDLE canlibThreadHandleMutex = INVALID_HANDLE_VALUE;

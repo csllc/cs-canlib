@@ -18,9 +18,9 @@
 #include <canstat.h>     // provide CANlib status constants
 
 #include "cs_canlib.h"
-#include "cs_canlib_event.h" // provide canlibEvent-- functions
-#include "cs_canlib_helper.h"
-#include "napi_helper.h"
+#include "cs_canlib_event.h"  // provide canlibEvent* functions
+#include "cs_canlib_helper.h" // provide canlibStatusLookup, canlibDumpBuffer
+#include "napi_helper.h"      // provide DECLARE_NAPI_METHOD
 
 
 // ----------------------------------- // -----------------------------------

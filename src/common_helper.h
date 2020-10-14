@@ -1,4 +1,4 @@
-/* Common helper functions used by both PCAN-Basic and N-API components
+/* Common helper functions used by both CANlib and N-API components
 
    Copyright (c) 2020 Control Solutions LLC. All rights reserved.
 */

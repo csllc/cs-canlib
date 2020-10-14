@@ -1,10 +1,20 @@
+/* N-API interface for Kvaser CANlib
+
+   Functions that control the use of a Win32 event provided by the CANlib
+   library to signal that received data is available for reading. When enabled,
+   a worker thread is spawned that waits on this event and invokes a callback
+   function when its state changes to signaled, which presumably calls canread()
+   to retreive the newly received data.
+
+   Copyright (c) 2020 Control Solutions LLC. All rights reserved.
+*/
+
+
 #ifndef _CS_CANLIB_EVENT_H_
 #define _CS_CANLIB_EVENT_H_
 
-#include <windows.h>
 
-
-#define CANLIB_EVENT_DEBUG
+//#define CANLIB_EVENT_DEBUG
 // Uncomment to enable debugging messages, which may affect timing or
 // performance
 
@@ -20,13 +30,16 @@ typedef struct threadParameters_s
     void (*callback) (int);
 } threadParameters_t;
 
+
 // Security access requested for event objects and thread
 #define EVENT_PERMISSIONS (EVENT_MODIFY_STATE | SYNCHRONIZE)
+
 
 // Indices of events when packed into struct passed to WaitForMultipleObjects
 // in pcanEventThreadProc
 #define EVENT_INDEX_READ   (0)
 #define EVENT_INDEX_EXIT   (1)
+
 
 // Timeout, in ms, for accessing canlibThreadHandleMutex
 #define CANLIB_MUTEX_TIMEOUT (1000)
@@ -55,6 +68,7 @@ typedef struct threadParameters_s
 // ----------------------------------- // -----------------------------------
 // Public functions
 
+
 // Enable Win32 event signaling when data is received on CAN bus and available
 // in buffer. Accepts callback function that is called when event is signaled:
 // void (*callback) (int)
@@ -64,10 +78,12 @@ typedef struct threadParameters_s
 // Returns thread's CAN handle on success
 int canlibEventEnable(int canlibChannel, int canlibFlags, void *callback);
 
+
 // Disable the previously enabled Win32 event
 // Returns 1 on failure
 // Retruns 0 on success
 int canlibEventDisable(void);
+
 
 // Print the contents of a threadParameters_t structure to stdout in a
 // human-readable format for debugging purposes

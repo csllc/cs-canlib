@@ -12,7 +12,7 @@
 
 #include <node_api.h> // provide N-API types
 
-#define CANLIB_DEBUG
+//#define CANLIB_DEBUG
 // Uncomment to enable debugging messages, which may affect timing or
 // performance
 

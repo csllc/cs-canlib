@@ -1,9 +1,16 @@
+/* N-API interface for Kvaser CANlib
+
+   Collection of functions that print CANlib structures to stdout and look up
+   string representations of constants
+
+   Copyright (c) 2020 Control Solutions LLC. All rights reserved.
+*/
+
+
 #include <stdio.h>       // provide printf
-
 #include <windows.h>     // provide MAX_PATH
-
-#include <canlib.h>
-#include <canstat.h>
+#include <canlib.h>      // provide CANlib API functions
+#include <canstat.h>     // provide CANlib status constants
 
 // ----------------------------------- // -----------------------------------
 // Definitions
