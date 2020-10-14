@@ -10,21 +10,22 @@
 #include <assert.h>      // provide assert
 #include <node_api.h>    // provide N-API types, constants, and functions
 #include <stdio.h>       // provide printf
-#include <stdint.h>
+#include <stdint.h>      // provide uintX_t
 
 #include <windows.h>     // provide Win32 types, constants, and functions
-#include <processthreadsapi.h>
 
-#include <canlib.h>
-#include <canstat.h>
+#include <canlib.h>      // provide CANlib API functions
+#include <canstat.h>     // provide CANlib status constants
 
 #include "cs_canlib.h"
 #include "cs_canlib_event.h" // provide canlibEvent-- functions
 #include "cs_canlib_helper.h"
 #include "napi_helper.h"
 
+
 // ----------------------------------- // -----------------------------------
 // Definitions
+
 
 // Length of N-API module descriptor list, used in Init
 enum { descriptors_len = 20 };
@@ -41,6 +42,7 @@ enum { descriptors_len = 20 };
 // ----------------------------------- // -----------------------------------
 // Local variables
 
+
 // Data read callback function, created in main thread and called from worker
 // thread
 napi_threadsafe_function canlibCallback = { 0 };
@@ -50,8 +52,6 @@ napi_threadsafe_function canlibCallback = { 0 };
 
 // ----------------------------------- // -----------------------------------
 // Local functions
-
-
 
 
 // Register N-API module
@@ -74,16 +74,15 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("InitializeLibrary", canlib_canInitializeLibrary),
         DECLARE_NAPI_METHOD("OpenChannel", canlib_canOpenChannel),
         DECLARE_NAPI_METHOD("Close", canlib_canClose),
-        DECLARE_NAPI_METHOD("SetBusOutputControl", canlib_canSetBusOutputControl),
         DECLARE_NAPI_METHOD("BusOn", canlib_canBusOn),
         DECLARE_NAPI_METHOD("BusOff", canlib_canBusOff),
+        DECLARE_NAPI_METHOD("TranslateBaud", canlib_canTranslateBaud),
+        DECLARE_NAPI_METHOD("SetBusParams", canlib_canSetBusParams),
+        DECLARE_NAPI_METHOD("GetBusParams", canlib_canGetBusParams),
         DECLARE_NAPI_METHOD("Write", canlib_canWrite),
         DECLARE_NAPI_METHOD("WriteSync", canlib_canWriteSync),
         DECLARE_NAPI_METHOD("Read", canlib_canRead),
         DECLARE_NAPI_METHOD("ReadWait", canlib_canReadWait),
-        DECLARE_NAPI_METHOD("TranslateBaud", canlib_canTranslateBaud),
-        DECLARE_NAPI_METHOD("SetBusParams", canlib_canSetBusParams),
-        DECLARE_NAPI_METHOD("GetBusParams", canlib_canGetBusParams),
         DECLARE_NAPI_METHOD("FlushTransmitQueue", canlib_canFlushTransmitQueue),
         DECLARE_NAPI_METHOD("FlushReceiveQueue", canlib_canFlushReceiveQueue),
         DECLARE_NAPI_METHOD("SetAcceptanceFilter", canlib_canSetAcceptanceFilter),
@@ -199,7 +198,7 @@ napi_value canlib_canOpenChannel(napi_env env, napi_callback_info info)
 #ifdef CANLIB_DEBUG
     printf("canlib_canOpenChannel:\n"
            "  canlibHandle  = 0x%02X (%s)\n"
-           "  canlibChannel = 0x%02X\n"
+           "  canlibChannel = %i\n"
            "  canlibFlags   = 0x%02X\n",
            canlibHandle, canlibStatusLookup(canlibHandle),
            canlibChannel,
@@ -255,7 +254,7 @@ napi_value canlib_canClose(napi_env env, napi_callback_info info)
     // Print results to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canClose:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
+           "  canlibStatus      = %i (%s)\n"
            "  canlibHandle      = 0x%02X\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibHandle);
@@ -266,67 +265,6 @@ napi_value canlib_canClose(napi_env env, napi_callback_info info)
     {
         napi_throw_error(env, canlibStatusLookup(canlibStatus),
                          "canlib_canClose: Error at canClose.");
-        return 0;
-    }
-
-    // Create an N-API value for the result and return it
-    napi_value result;
-    status = napi_create_int32(env, canlibStatus, &result);
-    assert(status == napi_ok);
-
-    return result;
-}
-
-
-
-
-napi_value canlib_canSetBusOutputControl(napi_env env, napi_callback_info info)
-{
-    napi_status status = napi_generic_failure;
-
-    // Retrieve callback info and argument list
-    size_t argc = CANSETBUSOUTPUTCONTROL_ARGC;
-    napi_value argv[CANSETBUSOUTPUTCONTROL_ARGC];
-
-    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
-    assert(status == napi_ok);
-
-    if (argc != CANSETBUSOUTPUTCONTROL_ARGC)
-    {
-        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
-        return 0;
-    }
-
-    // Retrieve arguments
-    int32_t canlibHandle;
-    status = napi_get_value_int32(env, argv[0], &canlibHandle);
-    assert(status == napi_ok);
-
-    uint32_t canlibDrivertype;
-    status = napi_get_value_uint32(env, argv[1], &canlibDrivertype);
-    assert(status == napi_ok);
-
-    // Set CAN controller driver type
-    canStatus canlibStatus;
-    canlibStatus = canSetBusOutputControl(canlibHandle, canlibDrivertype);
-
-    // Print results to console
-#ifdef CANLIB_DEBUG
-    printf("canlib_canSetBusOutputControl:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
-           "  canlibHandle      = 0x%02X\n"
-           "  canlibDrivertype = 0x%02X\n",
-           canlibStatus, canlibStatusLookup(canlibStatus),
-           canlibHandle,
-           canlibDrivertype);
-#endif
-
-    // Throw error, if any
-    if (canlibStatus < 0)
-    {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canSetBusOutputControl: "
-                         "Error at canSetBusOutputControl.");
         return 0;
     }
 
@@ -370,7 +308,7 @@ napi_value canlib_canBusOn(napi_env env, napi_callback_info info)
     // Print results to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canBusOn:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
+           "  canlibStatus      = %i (%s)\n"
            "  canlibHandle      = 0x%02X\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibHandle);
@@ -424,7 +362,7 @@ napi_value canlib_canBusOff(napi_env env, napi_callback_info info)
     // Print results to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canBusOff:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
+           "  canlibStatus      = %i (%s)\n"
            "  canlibHandle      = 0x%02X\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibHandle);
@@ -446,532 +384,6 @@ napi_value canlib_canBusOff(napi_env env, napi_callback_info info)
     return result;
 }
 
-
-
-
-napi_value canlib_canWrite(napi_env env, napi_callback_info info)
-{
-    napi_status status = napi_generic_failure;
-
-    // Retrieve callback info and argument list
-    size_t argc = CANWRITE_ARGC;
-    napi_value argv[CANWRITE_ARGC];
-
-    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
-    assert(status == napi_ok);
-
-    if (argc != CANWRITE_ARGC)
-    {
-        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
-        return 0;
-    }
-
-    // Retrieve arguments
-    int32_t canlibHandle;
-    status = napi_get_value_int32(env, argv[0], &canlibHandle);
-    assert(status == napi_ok);
-
-    napi_valuetype canlibMsgType;
-    status = napi_typeof(env, argv[1], &canlibMsgType);
-    assert(status == napi_ok);
-
-    if (canlibMsgType != napi_object)
-    {
-        napi_throw_type_error(env, 0, "Argument 1 (Msg) is not an object.");
-        return 0;
-    }
-
-    napi_value id;
-    int32_t canlibId;
-    status = napi_get_named_property(env, argv[1], "id", &id);
-    assert(status == napi_ok);
-    status = napi_get_value_int32(env, id, &canlibId);
-    assert(status == napi_ok);
-
-    napi_value msg;
-    uint8_t *canlibMsg;
-    size_t canlibMsgLen;
-    status = napi_get_named_property(env, argv[1], "buf", &msg);
-    assert(status == napi_ok);
-    status = napi_get_buffer_info(env, msg, (void**)&canlibMsg, &canlibMsgLen);
-    assert(status == napi_ok);
-    
-    napi_value dlc;
-    uint32_t canlibDlc;
-    status = napi_get_named_property(env, argv[1], "dlc", &dlc);
-    assert(status == napi_ok);
-    status = napi_get_value_int32(env, dlc, &canlibDlc);
-    assert(status == napi_ok);
-
-    napi_value flag;
-    uint32_t canlibFlag;
-    status = napi_get_named_property(env, argv[1], "flag", &flag);
-    assert(status == napi_ok);
-    status = napi_get_value_int32(env, flag, &canlibFlag);
-    assert(status == napi_ok);
-
-
-    if (canlibDlc != canlibMsgLen)
-    {
-        napi_throw_error(env, 0, "Mismatch between DLC and actual data buffer length");
-        return 0;
-    }
-
-    // Attempt to write message
-    canStatus canlibStatus;
-    canlibStatus = canWrite(canlibHandle, canlibId, canlibMsg, canlibDlc, canlibFlag);
-
-    // Print results to console
-#ifdef CANLIB_DEBUG
-    printf("canlib_canWrite:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
-           "  canlibHandle   = 0x%02X\n"
-           "  canlibId       = 0x%02X\n"
-           "  canlibDlc      = 0x%02X\n"
-           "  canlibFlag     = 0x%02X\n"
-           "  canlibMsg      = ",
-           canlibStatus, canlibStatusLookup(canlibStatus),
-           canlibHandle,
-           canlibId,
-           canlibDlc,
-           canlibFlag);
-    canlibDumpBuffer(canlibMsg, canlibDlc);
-
-    printf("\n");
-#endif
-
-    // Throw error, if any
-    if (canlibStatus < 0)
-    {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canWrite: Error at canWrite.");
-        return 0;
-    }
-
-    // Create an N-API value for the result and return it
-    napi_value result;
-    status = napi_create_int32(env, canlibStatus, &result);
-    assert(status == napi_ok);
-
-    return result;
-}
-
-
-
-
-napi_value canlib_canWriteSync(napi_env env, napi_callback_info info)
-{
-    napi_status status = napi_generic_failure;
-
-    // Retrieve callback info and argument list
-    size_t argc = CANWRITESYNC_ARGC;
-    napi_value argv[CANWRITESYNC_ARGC];
-
-    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
-    assert(status == napi_ok);
-
-    if (argc != CANWRITESYNC_ARGC)
-    {
-        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
-        return 0;
-    }
-
-    // Retrieve arguments
-    int32_t canlibHandle;
-    status = napi_get_value_int32(env, argv[0], &canlibHandle);
-    assert(status == napi_ok);
-
-    uint32_t canlibTimeout;
-    status = napi_get_value_uint32(env, argv[0], &canlibTimeout);
-    assert(status == napi_ok);
-
-    // Wait for CAN messages to be sent
-    canStatus canlibStatus;
-    canlibStatus = canWriteSync(canlibHandle, canlibTimeout);
-
-    // Print results to console
-#ifdef CANLIB_DEBUG
-    printf("canlib_canWriteSync:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
-           "  canlibHandle      = 0x%02X\n"
-           "  canlibTimeout  = 0x%02X\n",
-           canlibStatus, canlibStatusLookup(canlibStatus),
-           canlibHandle,
-           canlibTimeout);
-#endif
-
-    // Throw error, if any
-    if (canlibStatus < 0)
-    {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canWriteSync: Error at canWriteSync.");
-        return 0;
-    }
-
-    // Create an N-API value for the result and return it
-    napi_value result;
-    status = napi_create_int32(env, canlibStatus, &result);
-    assert(status == napi_ok);
-
-    return result;
-}
-
-
-
-
-napi_value canlib_canRead(napi_env env, napi_callback_info info)
-{
-    napi_status status = napi_generic_failure;
-
-    // Retrieve callback info and argument list
-    size_t argc = CANREAD_ARGC;
-    napi_value argv[CANREAD_ARGC];
-
-    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
-    assert(status == napi_ok);
-
-    if (argc != CANREAD_ARGC)
-    {
-        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
-                              "This implementation of canRead accepts 1 arguments.");
-        return 0;
-    }
-
-    // Retrieve arguments
-    int32_t canlibHandle;
-    status = napi_get_value_int32(env, argv[0], &canlibHandle);
-    assert(status == napi_ok);
-
-    // Create variables to receive CAN data
-    unsigned int canlibId;
-    uint8_t canlibMsg[8];
-    unsigned int canlibDlc;
-    unsigned int canlibFlag;
-    unsigned long canlibTime;
-
-    // Read from CAN receive buffer
-    canStatus canlibStatus;
-    canlibStatus = canRead(canlibHandle,
-                           &canlibId,
-                           canlibMsg,
-                           &canlibDlc,
-                           &canlibFlag,
-                           &canlibTime);
-
-    // Print results to console
-#ifdef CANLIB_DEBUG
-    if (canlibStatus == canOK) {
-        printf("canlib_canRead:\n"
-               "  canlibStatus   = 0x%02X (%s)\n"
-               "  canlibHandle   = 0x%02X\n"
-               "  canlibId       = 0x%02X\n"
-               "  canlibDlc      = 0x%02X\n"
-               "  canlibFlag     = 0x%02X\n"
-               "  canlibTime     = 0x%02X\n"
-               "  canlibMsg      = ",
-               canlibStatus, canlibStatusLookup(canlibStatus),
-               canlibHandle,
-               canlibId,
-               canlibDlc,
-               canlibFlag,
-               canlibTime);
-
-        canlibDumpBuffer(canlibMsg, canlibDlc);
-
-        printf("\n");
-    }
-#endif
-
-    // Throw error, if any
-    if (canlibStatus < 0)
-    {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canRead: Error at canRead.");
-        return 0;
-    }
-
-    // Create N-API object to return
-    napi_value message;
-    status = napi_create_object(env, &message);
-    assert(status == napi_ok);
-
-    // Set properties of object
-    napi_value id;
-    status = napi_create_int32(env, canlibId, &id);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "id", id);
-    assert(status == napi_ok);
-
-    napi_value buf;
-    void *bufResult;
-    status = napi_create_buffer_copy(env, canlibDlc, canlibMsg, (void*)&bufResult, &buf);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "buf", buf);
-    assert(status == napi_ok);
-
-    napi_value dlc;
-    status = napi_create_int32(env, canlibDlc, &dlc);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "dlc", dlc);
-    assert(status == napi_ok);
-
-    napi_value flag;
-    status = napi_create_int32(env, canlibFlag, &flag);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "flag", flag);
-    assert(status == napi_ok);
-
-    napi_value time;
-    status = napi_create_int32(env, canlibTime, &time);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "time", time);
-    assert(status == napi_ok);
-
-    // Return the object
-    return message;
-}
-
-
-
-
-napi_value canlib_canReadWait(napi_env env, napi_callback_info info)
-{
-    napi_status status = napi_generic_failure;
-
-    // Retrieve callback info and argument list
-    size_t argc = CANREADWAIT_ARGC;
-    napi_value argv[CANREADWAIT_ARGC];
-
-    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
-    assert(status == napi_ok);
-
-    if (argc != CANREADWAIT_ARGC)
-    {
-        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
-                              "This implementation of canReadWait accepts 2 arguments.");
-        return 0;
-    }
-
-    // Retrieve arguments
-    int32_t canlibHandle;
-    status = napi_get_value_int32(env, argv[0], &canlibHandle);
-    assert(status == napi_ok);
-
-    int32_t canlibTimeout;
-    status = napi_get_value_int32(env, argv[1], &canlibTimeout);
-    assert(status == napi_ok);
-
-    // Create variables to receive CAN data
-    unsigned int canlibId;
-    uint8_t canlibMsg[8];
-    unsigned int canlibDlc;
-    unsigned int canlibFlag;
-    unsigned long canlibTime;
-
-    // Read from CAN receive buffer
-    canStatus canlibStatus;
-    canlibStatus = canReadWait(canlibHandle,
-                               &canlibId,
-                               canlibMsg,
-                               &canlibDlc,
-                               &canlibFlag,
-                               &canlibTime,
-                               canlibTimeout);
-
-    // Print results to console
-#ifdef CANLIB_DEBUG
-    printf("canlib_canRead:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
-           "  canlibHandle      = 0x%02X\n"
-           "  canlibId       = 0x%02X\n"
-           "  canlibDlc      = 0x%02X\n"
-           "  canlibFlag     = 0x%02X\n"
-           "  canlibTime     = 0x%02X\n"
-           "  canlibTimeout  = %i\n"
-           "  canlibMsg      = ",
-           canlibStatus, canlibStatusLookup(canlibStatus),
-           canlibHandle,
-           canlibId,
-           canlibDlc,
-           canlibFlag,
-           canlibTime,
-           canlibTimeout);
-
-    canlibDumpBuffer(canlibMsg, canlibDlc);
-
-    printf("\n");
-#endif
-
-    // Throw error, if any
-    if (canlibStatus < 0)
-    {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canReadWait: Error at canReadWait.");
-        return 0;
-    }
-
-    // Create N-API object to return
-    napi_value message;
-    status = napi_create_object(env, &message);
-    assert(status == napi_ok);
-
-    // Set properties of object
-    napi_value id;
-    status = napi_create_int32(env, canlibId, &id);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "id", id);
-    assert(status == napi_ok);
-
-    napi_value buf;
-    void *bufResult;
-    status = napi_create_buffer_copy(env, canlibDlc, canlibMsg, (void*)&bufResult, &buf);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "buf", buf);
-    assert(status == napi_ok);
-
-    napi_value dlc;
-    status = napi_create_int32(env, canlibDlc, &dlc);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "dlc", dlc);
-    assert(status == napi_ok);
-
-    napi_value flag;
-    status = napi_create_int32(env, canlibFlag, &flag);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "flag", flag);
-    assert(status == napi_ok);
-
-    napi_value time;
-    status = napi_create_int32(env, canlibTime, &time);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, message, "time", time);
-    assert(status == napi_ok);
-
-    // Return the object
-    return message;
-}
-
-
-
-
-napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
-{
-    napi_status status = napi_generic_failure;
-
-    // Retrieve callback info and argument list
-    size_t argc = CANCHANNELINFO_ARGC;
-    napi_value argv;
-
-    status = napi_get_cb_info(env, info, &argc, &argv, 0, 0);
-    assert(status == napi_ok);
-
-    if (argc != CANCHANNELINFO_ARGC)
-    {
-        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
-        return 0;
-    }
-
-    // Get number of channels
-    int canlibChannelCount;
-    canStatus canlibStatus;
-    canlibStatus = canGetNumberOfChannels(&canlibChannelCount);
-
-    if (canlibStatus < 0)
-    {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canChannelInfo: Error at canGetNumberOfChannels.");
-        return 0;
-    }
-
-    // Print results to console
-#ifdef CANLIB_DEBUG
-    printf("canlib_canChannelInfo: %i channels found\n", canlibChannelCount);
-#endif
-
-    // Allocate array for channel types
-    int32_t *canlibChannelTypes = 0;
-
-    canlibChannelTypes = malloc(sizeof(*canlibChannelTypes) * canlibChannelCount);
-    if (canlibChannelTypes == 0)
-    {
-        napi_throw_error(env, 0, "canlib_canChannelInfo: Error at malloc.");
-        return 0;
-    }
-
-    // Retrieve channel type information
-    int i;
-    
-    for (i = 0; i < canlibChannelCount; i++)
-    {
-        canlibStatus = canGetChannelData(i, // channel
-                                         canCHANNELDATA_CARD_TYPE,
-                                         &(canlibChannelTypes[i]),
-                                         sizeof(canlibChannelTypes[i]));
-        if (canlibStatus < 0)
-        {
-            napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                             "canlib_canChannelInfo: Error at canGetChannelData.");
-            return 0;
-        }
-    }
-
-    // Print result to console
-#ifdef CANLIB_DEBUG
-    for (i = 0; i < canlibChannelCount; i++)
-    {
-        printf("canlib_canChannelInfo: canlibChannelTypes[%i] = %i\n",
-               i, canlibChannelTypes[i]);
-    }
-#endif
-
-    // Create parent N-API object for channel info array
-    napi_value channelInfo;
-    status = napi_create_array(env, &channelInfo);
-    assert(status == napi_ok);
-
-    napi_value channelInfoElement;
-    napi_value channelInfoElementChannel;
-    napi_value channelInfoElementChannelType;
-
-    // Add applicable channels (based on type) to N-API object
-    for (i = 0; i < canlibChannelCount; i++)
-    {
-        // Only add the Leaf hardware series
-        if (canlibChannelTypes[i] == canHWTYPE_LEAF)
-        {
-            // Create N-API object for array element
-            status = napi_create_object(env, &channelInfoElement);
-            assert(status == napi_ok);
-
-            // Assign properties
-            // - Channel number
-            status = napi_create_int32(env, i, &channelInfoElementChannel);
-            assert(status == napi_ok);
-            status = napi_set_named_property(env, channelInfoElement, "channel",
-                                             channelInfoElementChannel);
-            assert(status == napi_ok);
-
-            // - Channel type
-            status = napi_create_int32(env, canlibChannelTypes[i],
-                                       &channelInfoElementChannelType);
-            assert(status == napi_ok);
-            status = napi_set_named_property(env, channelInfoElement, "channel_type",
-                                             channelInfoElementChannelType);
-            assert(status == napi_ok);
-
-            // Add complete element to array
-            status = napi_set_element(env, channelInfo, i, channelInfoElement);
-            assert(status == napi_ok);
-        }
-    }
-
-    // Cleanup
-    free(canlibChannelTypes);
-
-    // Return N-API object
-    return channelInfo;
-}
-    
 
 
 
@@ -1026,12 +438,12 @@ napi_value canlib_canTranslateBaud(napi_env env, napi_callback_info info)
     // Print the result to console
 #ifdef CANLIB_DEBUG
     printf("canlibTranslateBaud:\n"
-           "  canlibStatus  = 0x%02X (%s)\n"
+           "  canlibStatus         = %i (%s)\n"
            "  canlibFreqTranslated = %i\n"
-           "  canlibTseg1 = %i\n"
-           "  canlibTseg2 = %i\n"
-           "  canlibSjw = %i\n"
-           "  canlibNoSamp = %i\n",
+           "  canlibTseg1          = %i\n"
+           "  canlibTseg2          = %i\n"
+           "  canlibSjw            = %i\n"
+           "  canlibNoSamp         = %i\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibFreqTranslated,
            canlibTseg1,
@@ -1169,7 +581,7 @@ napi_value canlib_canSetBusParams(napi_env env, napi_callback_info info)
     // Print the result to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canSetBusParams:\n"
-           "  canlibStatus  = 0x%02X (%s)\n"
+           "  canlibStatus  = %i (%s)\n"
            "  canlibHandle  = 0x%02X\n"
            "  canlibFreq    = %i\n"
            "  canlibTseg1   = %i\n"
@@ -1310,7 +722,486 @@ napi_value canlib_canGetBusParams(napi_env env, napi_callback_info info)
 
     return params;
 }
+
+
+
+
+napi_value canlib_canWrite(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANWRITE_ARGC;
+    napi_value argv[CANWRITE_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANWRITE_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    napi_valuetype canlibMsgType;
+    status = napi_typeof(env, argv[1], &canlibMsgType);
+    assert(status == napi_ok);
+
+    if (canlibMsgType != napi_object)
+    {
+        napi_throw_type_error(env, 0, "Argument 1 (Msg) is not an object.");
+        return 0;
+    }
+
+    napi_value id;
+    int32_t canlibId;
+    status = napi_get_named_property(env, argv[1], "id", &id);
+    assert(status == napi_ok);
+    status = napi_get_value_int32(env, id, &canlibId);
+    assert(status == napi_ok);
+
+    napi_value msg;
+    uint8_t *canlibMsg;
+    size_t canlibMsgLen;
+    status = napi_get_named_property(env, argv[1], "buf", &msg);
+    assert(status == napi_ok);
+    status = napi_get_buffer_info(env, msg, (void**)&canlibMsg, &canlibMsgLen);
+    assert(status == napi_ok);
     
+    napi_value dlc;
+    uint32_t canlibDlc;
+    status = napi_get_named_property(env, argv[1], "dlc", &dlc);
+    assert(status == napi_ok);
+    status = napi_get_value_int32(env, dlc, &canlibDlc);
+    assert(status == napi_ok);
+
+    napi_value flag;
+    uint32_t canlibFlag;
+    status = napi_get_named_property(env, argv[1], "flag", &flag);
+    assert(status == napi_ok);
+    status = napi_get_value_int32(env, flag, &canlibFlag);
+    assert(status == napi_ok);
+
+
+    if (canlibDlc != canlibMsgLen)
+    {
+        napi_throw_error(env, 0, "Mismatch between DLC and actual data buffer length");
+        return 0;
+    }
+
+    // Attempt to write message
+    canStatus canlibStatus;
+    canlibStatus = canWrite(canlibHandle, canlibId, canlibMsg, canlibDlc, canlibFlag);
+
+    // Print results to console
+#ifdef CANLIB_DEBUG
+    printf("canlib_canWrite:\n"
+           "  canlibStatus   = %i (%s)\n"
+           "  canlibHandle   = 0x%02X\n"
+           "  canlibId       = 0x%02X\n"
+           "  canlibDlc      = 0x%02X\n"
+           "  canlibFlag     = 0x%02X\n"
+           "  canlibMsg      = ",
+           canlibStatus, canlibStatusLookup(canlibStatus),
+           canlibHandle,
+           canlibId,
+           canlibDlc,
+           canlibFlag);
+    canlibDumpBuffer(canlibMsg, canlibDlc);
+
+    printf("\n");
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canWrite: Error at canWrite.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_int32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
+
+
+napi_value canlib_canWriteSync(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANWRITESYNC_ARGC;
+    napi_value argv[CANWRITESYNC_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANWRITESYNC_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    uint32_t canlibTimeout;
+    status = napi_get_value_uint32(env, argv[0], &canlibTimeout);
+    assert(status == napi_ok);
+
+    // Wait for CAN messages to be sent
+    canStatus canlibStatus;
+    canlibStatus = canWriteSync(canlibHandle, canlibTimeout);
+
+    // Print results to console
+#ifdef CANLIB_DEBUG
+    printf("canlib_canWriteSync:\n"
+           "  canlibStatus   = %i (%s)\n"
+           "  canlibHandle   = 0x%02X\n"
+           "  canlibTimeout  = %i\n",
+           canlibStatus, canlibStatusLookup(canlibStatus),
+           canlibHandle,
+           canlibTimeout);
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canWriteSync: Error at canWriteSync.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_int32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
+
+
+napi_value canlib_canRead(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANREAD_ARGC;
+    napi_value argv[CANREAD_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANREAD_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
+                              "This implementation of canRead accepts 1 arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    // Create variables to receive CAN data
+    unsigned int canlibId;
+    uint8_t canlibMsg[8];
+    unsigned int canlibDlc;
+    unsigned int canlibFlag;
+    unsigned long canlibTime;
+
+    // Read from CAN receive buffer
+    canStatus canlibStatus;
+    canlibStatus = canRead(canlibHandle,
+                           &canlibId,
+                           canlibMsg,
+                           &canlibDlc,
+                           &canlibFlag,
+                           &canlibTime);
+
+    // Print results to console
+#ifdef CANLIB_DEBUG
+    if (canlibStatus == canOK)
+    {
+        printf("canlib_canRead:\n"
+               "  canlibStatus   = %i (%s)\n"
+               "  canlibHandle   = 0x%02X\n"
+               "  canlibId       = 0x%02X\n"
+               "  canlibDlc      = 0x%02X\n"
+               "  canlibFlag     = 0x%02X\n"
+               "  canlibTime     = 0x%02X\n"
+               "  canlibMsg      = ",
+               canlibStatus, canlibStatusLookup(canlibStatus),
+               canlibHandle,
+               canlibId,
+               canlibDlc,
+               canlibFlag,
+               canlibTime);
+
+        canlibDumpBuffer(canlibMsg, canlibDlc);
+
+        printf("\n");
+    }
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canRead: Error at canRead.");
+        return 0;
+    }
+
+    // Create N-API object to return
+    napi_value message;
+    status = napi_create_object(env, &message);
+    assert(status == napi_ok);
+
+    // Set properties of object
+    napi_value id;
+    status = napi_create_int32(env, canlibId, &id);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "id", id);
+    assert(status == napi_ok);
+
+    napi_value buf;
+    void *bufResult;
+    status = napi_create_buffer_copy(env, canlibDlc, canlibMsg, (void*)&bufResult, &buf);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "buf", buf);
+    assert(status == napi_ok);
+
+    napi_value dlc;
+    status = napi_create_int32(env, canlibDlc, &dlc);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "dlc", dlc);
+    assert(status == napi_ok);
+
+    napi_value flag;
+    status = napi_create_int32(env, canlibFlag, &flag);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "flag", flag);
+    assert(status == napi_ok);
+
+    napi_value time;
+    status = napi_create_int32(env, canlibTime, &time);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "time", time);
+    assert(status == napi_ok);
+
+    // Return the object
+    return message;
+}
+
+
+
+
+napi_value canlib_canReadWait(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANREADWAIT_ARGC;
+    napi_value argv[CANREADWAIT_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANREADWAIT_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
+                              "This implementation of canReadWait accepts 2 arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    int32_t canlibTimeout;
+    status = napi_get_value_int32(env, argv[1], &canlibTimeout);
+    assert(status == napi_ok);
+
+    // Create variables to receive CAN data
+    unsigned int canlibId;
+    uint8_t canlibMsg[8];
+    unsigned int canlibDlc;
+    unsigned int canlibFlag;
+    unsigned long canlibTime;
+
+    // Read from CAN receive buffer
+    canStatus canlibStatus;
+    canlibStatus = canReadWait(canlibHandle,
+                               &canlibId,
+                               canlibMsg,
+                               &canlibDlc,
+                               &canlibFlag,
+                               &canlibTime,
+                               canlibTimeout);
+
+    // Print results to console
+#ifdef CANLIB_DEBUG
+    printf("canlib_canRead:\n"
+           "  canlibStatus   = %i (%s)\n"
+           "  canlibHandle   = 0x%02X\n"
+           "  canlibId       = 0x%02X\n"
+           "  canlibDlc      = 0x%02X\n"
+           "  canlibFlag     = 0x%02X\n"
+           "  canlibTime     = 0x%02X\n"
+           "  canlibTimeout  = %i\n"
+           "  canlibMsg      = ",
+           canlibStatus, canlibStatusLookup(canlibStatus),
+           canlibHandle,
+           canlibId,
+           canlibDlc,
+           canlibFlag,
+           canlibTime,
+           canlibTimeout);
+
+    canlibDumpBuffer(canlibMsg, canlibDlc);
+
+    printf("\n");
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canReadWait: Error at canReadWait.");
+        return 0;
+    }
+
+    // Create N-API object to return
+    napi_value message;
+    status = napi_create_object(env, &message);
+    assert(status == napi_ok);
+
+    // Set properties of object
+    napi_value id;
+    status = napi_create_int32(env, canlibId, &id);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "id", id);
+    assert(status == napi_ok);
+
+    napi_value buf;
+    void *bufResult;
+    status = napi_create_buffer_copy(env, canlibDlc, canlibMsg, (void*)&bufResult, &buf);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "buf", buf);
+    assert(status == napi_ok);
+
+    napi_value dlc;
+    status = napi_create_int32(env, canlibDlc, &dlc);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "dlc", dlc);
+    assert(status == napi_ok);
+
+    napi_value flag;
+    status = napi_create_int32(env, canlibFlag, &flag);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "flag", flag);
+    assert(status == napi_ok);
+
+    napi_value time;
+    status = napi_create_int32(env, canlibTime, &time);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, message, "time", time);
+    assert(status == napi_ok);
+
+    // Return the object
+    return message;
+}
+
+
+
+
+napi_value canlib_canSetAcceptanceFilter(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANSETACCEPTANCEFILTER_ARGC;
+    napi_value argv[CANSETACCEPTANCEFILTER_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANSETACCEPTANCEFILTER_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return -1;
+    }
+
+    // Retrieve or check arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    unsigned int canlibCode;
+    status = napi_get_value_uint32(env, argv[1], &canlibCode);
+    assert(status == napi_ok);
+
+    unsigned int canlibMask;
+    status = napi_get_value_uint32(env, argv[2], &canlibMask);
+    assert(status == napi_ok);
+
+    bool canlibIsExtended;
+    status = napi_get_value_bool(env, argv[3], &canlibIsExtended);
+    assert(status == napi_ok);
+
+    // Apply filter
+    canStatus canlibStatus;
+    canlibStatus = canSetAcceptanceFilter(canlibHandle, canlibCode,
+                                          canlibMask, canlibIsExtended);
+
+    // Print result to console
+#ifdef CANLIB_DEBUG
+    printf("canSetAcceptanceFilter:\n"
+           "  canlibHandle     = 0x%02X\n"
+           "  canlibCode       = 0x%08X\n"
+           "  canlibMask       = 0x%08X\n"
+           "  canlibIsExtended = %i\n",
+           canlibHandle,
+           canlibCode,
+           canlibMask,
+           canlibIsExtended);
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canSetAcceptanceFilter: "
+                         "Error at canSetAcceptanceFilter.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_int32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
 
 
 napi_value canlib_canFlushTransmitQueue(napi_env env, napi_callback_info info)
@@ -1342,7 +1233,7 @@ napi_value canlib_canFlushTransmitQueue(napi_env env, napi_callback_info info)
     // Print results to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canFlushTransmitQueue:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
+           "  canlibStatus   = %i (%s)\n"
            "  canlibHandle   = 0x%02X\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibHandle);
@@ -1397,7 +1288,7 @@ napi_value canlib_canFlushReceiveQueue(napi_env env, napi_callback_info info)
     // Print results to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canReceiveQueue:\n"
-           "  canlibStatus   = 0x%02X (%s)\n"
+           "  canlibStatus   = %i (%s)\n"
            "  canlibHandle   = 0x%02X\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibHandle);
@@ -1422,75 +1313,125 @@ napi_value canlib_canFlushReceiveQueue(napi_env env, napi_callback_info info)
 
 
 
-napi_value canlib_canSetAcceptanceFilter(napi_env env, napi_callback_info info)
+
+napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
 {
     napi_status status = napi_generic_failure;
 
     // Retrieve callback info and argument list
-    size_t argc = CANSETACCEPTANCEFILTER_ARGC;
-    napi_value argv[CANSETACCEPTANCEFILTER_ARGC];
+    size_t argc = CANCHANNELINFO_ARGC;
+    napi_value argv;
 
-    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    status = napi_get_cb_info(env, info, &argc, &argv, 0, 0);
     assert(status == napi_ok);
 
-    if (argc != CANSETACCEPTANCEFILTER_ARGC)
+    if (argc != CANCHANNELINFO_ARGC)
     {
         napi_throw_type_error(env, 0, "Incorrect number of arguments.");
-        return -1;
-    }
-
-    // Retrieve or check arguments
-    int32_t canlibHandle;
-    status = napi_get_value_int32(env, argv[0], &canlibHandle);
-    assert(status == napi_ok);
-
-    unsigned int canlibCode;
-    status = napi_get_value_uint32(env, argv[1], &canlibCode);
-    assert(status == napi_ok);
-
-    unsigned int canlibMask;
-    status = napi_get_value_uint32(env, argv[2], &canlibMask);
-    assert(status == napi_ok);
-
-    bool canlibIsExtended;
-    status = napi_get_value_bool(env, argv[3], &canlibIsExtended);
-    assert(status == napi_ok);
-
-    // Apply filter
-    canStatus canlibStatus;
-    canlibStatus = canSetAcceptanceFilter(canlibHandle, canlibCode,
-                                          canlibMask, canlibIsExtended);
-
-    // Print result to console
-#ifdef CANLIB_DEBUG
-    printf("canSetAcceptanceFilter:\n"
-           "  canlibHandle = 0x%02X\n"
-           "  canlibCode = 0x%08X\n"
-           "  canlibMask = 0x%08X\n"
-           "  canlibIsExtended = %i\n",
-           canlibHandle,
-           canlibCode,
-           canlibMask,
-           canlibIsExtended);
-#endif
-
-    // Throw error, if any
-    if (canlibStatus < 0)
-    {
-        napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canSetAcceptanceFilter: "
-                         "Error at canSetAcceptanceFilter.");
         return 0;
     }
 
-    // Create an N-API value for the result and return it
-    napi_value result;
-    status = napi_create_int32(env, canlibStatus, &result);
+    // Get number of channels
+    int canlibChannelCount;
+    canStatus canlibStatus;
+    canlibStatus = canGetNumberOfChannels(&canlibChannelCount);
+
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canChannelInfo: Error at canGetNumberOfChannels.");
+        return 0;
+    }
+
+    // Print results to console
+#ifdef CANLIB_DEBUG
+    printf("canlib_canChannelInfo: %i channels found\n", canlibChannelCount);
+#endif
+
+    // Allocate array for channel types
+    int32_t *canlibChannelTypes = 0;
+
+    canlibChannelTypes = malloc(sizeof(*canlibChannelTypes) * canlibChannelCount);
+    if (canlibChannelTypes == 0)
+    {
+        napi_throw_error(env, 0, "canlib_canChannelInfo: Error at malloc.");
+        return 0;
+    }
+
+    // Retrieve channel type information
+    int i;
+    
+    for (i = 0; i < canlibChannelCount; i++)
+    {
+        canlibStatus = canGetChannelData(i, // channel
+                                         canCHANNELDATA_CARD_TYPE,
+                                         &(canlibChannelTypes[i]),
+                                         sizeof(canlibChannelTypes[i]));
+        if (canlibStatus < 0)
+        {
+            napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                             "canlib_canChannelInfo: Error at canGetChannelData.");
+            return 0;
+        }
+    }
+
+    // Print result to console
+#ifdef CANLIB_DEBUG
+    for (i = 0; i < canlibChannelCount; i++)
+    {
+        printf("canlib_canChannelInfo: canlibChannelTypes[%i] = %i\n",
+               i, canlibChannelTypes[i]);
+    }
+#endif
+
+    // Create parent N-API object for channel info array
+    napi_value channelInfo;
+    status = napi_create_array(env, &channelInfo);
     assert(status == napi_ok);
 
-    return result;
+    napi_value channelInfoElement;
+    napi_value channelInfoElementChannel;
+    napi_value channelInfoElementChannelType;
+
+    // Add applicable channels (based on type) to N-API object
+    for (i = 0; i < canlibChannelCount; i++)
+    {
+        // Only add the Leaf hardware series
+        if (canlibChannelTypes[i] == canHWTYPE_LEAF)
+        {
+            // Create N-API object for array element
+            status = napi_create_object(env, &channelInfoElement);
+            assert(status == napi_ok);
+
+            // Assign properties
+            // - Channel number
+            status = napi_create_int32(env, i, &channelInfoElementChannel);
+            assert(status == napi_ok);
+            status = napi_set_named_property(env, channelInfoElement, "channel",
+                                             channelInfoElementChannel);
+            assert(status == napi_ok);
+
+            // - Channel type
+            status = napi_create_int32(env, canlibChannelTypes[i],
+                                       &channelInfoElementChannelType);
+            assert(status == napi_ok);
+            status = napi_set_named_property(env, channelInfoElement, "channel_type",
+                                             channelInfoElementChannelType);
+            assert(status == napi_ok);
+
+            // Add complete element to array
+            status = napi_set_element(env, channelInfo, i, channelInfoElement);
+            assert(status == napi_ok);
+        }
+    }
+
+    // Cleanup
+    free(canlibChannelTypes);
+
+    // Return N-API object
+    return channelInfo;
 }
-    
+
 
 
 
@@ -1668,8 +1609,8 @@ napi_value canlib_canSetLoopback(napi_env env, napi_callback_info info)
     // Print result to console
 #ifdef CANLIB_DEBUG
     printf("canlib_canSetLoopback:\n"
-           "  canlibStatus = %i (%s)\n"
-           "  canlibHandle = 0x%02X\n"
+           "  canlibStatus          = %i (%s)\n"
+           "  canlibHandle          = 0x%02X\n"
            "  canlibLoopbackSetting = %i\n",
            canlibStatus, canlibStatusLookup(canlibStatus),
            canlibHandle,

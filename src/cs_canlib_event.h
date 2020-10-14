@@ -4,7 +4,7 @@
 #include <windows.h>
 
 
-//#define CANLIB_EVENT_DEBUG
+#define CANLIB_EVENT_DEBUG
 // Uncomment to enable debugging messages, which may affect timing or
 // performance
 

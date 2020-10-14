@@ -1,7 +1,7 @@
 #include <stdio.h>       // provide printf
 #include <windows.h>     // provide Win32 types, constants, and functions
-#include <canlib.h>
-#include <canstat.h>
+#include <canlib.h>      // provide CANlib API functions
+#include <canstat.h>     // provide CANlib status constants
 #include <stdbool.h>     // provide true and false
 
 #include "cs_canlib_event.h"
