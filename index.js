@@ -84,6 +84,9 @@ module.exports = class Canlib extends Duplex {
       // Set channel baud and filter (if specified)
       me._configure();
 
+      // Set loopback (aka transmit echo)
+      canlib.SetLoopback(me.handle, me.options.loopback);
+
       // Go on-bus
       canlib.BusOn(me.handle);
 
@@ -101,9 +104,12 @@ module.exports = class Canlib extends Duplex {
         me.on('_data', me._onData.bind(me));
         
         // Enable data event
-        // me.handle_thread = canlib.EnableEvent(me.channel, me.flags, function() {
-        //   me.emit('_data');
-        // });
+        me.handle_thread = canlib.EnableEvent(me.channel, me.flags, function() {
+          me.emit('_data');
+        });
+
+        // Set loopback for the event thread's handle
+        canlib.SetLoopback(me.handle_thread, me.options.loopback);
       })
       .then(function() {
         canlib.FlushTransmitQueue(me.handle);
@@ -123,7 +129,7 @@ module.exports = class Canlib extends Duplex {
       me.removeAllListeners();
 
       if (me.isOpen()) {
-        //canlib.DisableEvent(me.channel);
+        canlib.DisableEvent(me.channel);
         canlib.BusOff(me.handle);
         canlib.Close(me.handle);
       }
@@ -150,22 +156,11 @@ module.exports = class Canlib extends Duplex {
     return new Promise(function(resolve) {
       if (msg.buf.length <= 8) {
 
-        // Check params
-        let params = canlib.GetBusParams(me.handle);
-        console.log(params);
-
         // Write message to bus
         let canlibMsg = canlibConsts.toCanlibMsg(msg);
-        console.log(me.handle);
-        console.log(canlibMsg);
         canlib.Write(me.handle, canlibMsg);
         me.emit('write', msg);
-/*
-        // If loopback is enabled, push message back into receive stream
-        if (me.options.loopback) {
-          me.push(tpcan.toMsg(tpcan_buffer));
-        }
-*/       
+     
         resolve();
       } else {
         throw new Error("Tried to send invalid CAN data");
@@ -203,7 +198,6 @@ module.exports = class Canlib extends Duplex {
   }
 
   _onData() {
-    console.log("_onData: pid " + process.pid);
     let me = this;
     
     for (;;) {

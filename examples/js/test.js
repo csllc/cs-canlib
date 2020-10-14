@@ -4,6 +4,7 @@ const canlib = require("../..");
 
 let can = new canlib({
   canRate: 250000,
+  loopback: false,
 });
 
 can.list()
@@ -19,9 +20,9 @@ can.list()
                 ext: true,
                 buf: Buffer.from([0x45, 0x00, 0x00, 0x04, 0x00, 0x00]) });
   })
-  .then(() => {
-    can.close();
-  })
+  // .then(() => {
+  //   can.close();
+  // })
   .catch((err) => {
     console.error(err);
     can.close();
@@ -30,7 +31,7 @@ can.list()
 
 
 can.on('data', function(msg) {
-  console.log(JSON.stringify(msg, (key, value) => {
+  console.log("data: " + JSON.stringify(msg, (key, value) => {
     if ((typeof value === 'number') && (key == "id")) {
       return value.toString(16).toUpperCase().padStart(8, '0');
     } else if (typeof value === 'number') {
@@ -40,4 +41,17 @@ can.on('data', function(msg) {
     }
   }));
 });
+
+
+// can.on('write', function(msg) {
+//   console.log("write: " + JSON.stringify(msg, (key, value) => {
+//     if ((typeof value === 'number') && (key == "id")) {
+//       return value.toString(16).toUpperCase().padStart(8, '0');
+//     } else if (typeof value === 'number') {
+//       return value.toString(16).toUpperCase().padStart(2, '0');
+//     } else {
+//       return value;
+//     }
+//   }));
+// });
 

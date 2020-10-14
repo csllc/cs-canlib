@@ -27,7 +27,7 @@
 // Definitions
 
 // Length of N-API module descriptor list, used in Init
-enum { descriptors_len = 18 };
+enum { descriptors_len = 19 };
 
 
 
@@ -81,15 +81,16 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("WriteSync", canlib_canWriteSync),
         DECLARE_NAPI_METHOD("Read", canlib_canRead),
         DECLARE_NAPI_METHOD("ReadWait", canlib_canReadWait),
-        DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
         DECLARE_NAPI_METHOD("TranslateBaud", canlib_canTranslateBaud),
         DECLARE_NAPI_METHOD("SetBusParams", canlib_canSetBusParams),
         DECLARE_NAPI_METHOD("GetBusParams", canlib_canGetBusParams),
         DECLARE_NAPI_METHOD("FlushTransmitQueue", canlib_canFlushTransmitQueue),
         DECLARE_NAPI_METHOD("FlushReceiveQueue", canlib_canFlushReceiveQueue),
         // Additional functions
+        DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
         DECLARE_NAPI_METHOD("EnableEvent", canlib_canEnableEvent),
         DECLARE_NAPI_METHOD("DisableEvent", canlib_canDisableEvent),
+        DECLARE_NAPI_METHOD("SetLoopback", canlib_canSetLoopback),
     };
 
     status = napi_define_properties(env, exports, descriptors_len, descriptors);
@@ -1558,3 +1559,66 @@ napi_value canlib_canDisableEvent(napi_env env, napi_callback_info info)
 
     return result;
 }
+
+
+napi_value canlib_canSetLoopback(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Get callback info and argument list
+    size_t argc = CANSETLOOPBACK_ARGC;
+    napi_value argv[CANSETLOOPBACK_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANSETLOOPBACK_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    uint32_t canlibHandle;
+    status = napi_get_value_uint32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    uint8_t canlibLoopbackSetting;
+    status = napi_get_value_bool(env, argv[1], &canlibLoopbackSetting);
+    assert(status == napi_ok);
+
+    // Set message loopback
+    canStatus canlibStatus;
+    canlibStatus = canIoCtl(canlibHandle, canIOCTL_SET_LOCAL_TXECHO,
+                            &canlibLoopbackSetting, sizeof(canlibLoopbackSetting));
+
+    // Print result to console
+#ifdef CANLIB_DEBUG
+    printf("canlib_canSetLoopback:\n"
+           "  canlibStatus = %i (%s)\n"
+           "  canlibHandle = 0x%02X\n"
+           "  canlibLoopbackSetting = %i\n",
+           canlibStatus, canlibStatusLookup(canlibStatus),
+           canlibHandle,
+           canlibLoopbackSetting);
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canlibSetLoopback");
+        return 0;
+    }
+
+    // Create a N-API value for the result and return it
+    napi_value result;
+    status = napi_create_uint32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
+           
+                            

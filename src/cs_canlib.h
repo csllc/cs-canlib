@@ -51,7 +51,7 @@
 #define CANFLUSHRECEIVEQUEUE_ARGC (1)
 #define CANENABLEEVENT_ARGC (3)
 #define CANDISABLEEVENT_ARGC (1)
-
+#define CANSETLOOPBACK_ARGC (2)
 
 
 
@@ -120,7 +120,7 @@ napi_value canlib_canEnableEvent(napi_env env, napi_callback_info info);
 
 napi_value canlib_canDisableEvent(napi_env env, napi_callback_info info);
 
-
+napi_value canlib_canSetLoopback(napi_env env, napi_callback_info info);
 
 #endif // _CS_CANLIB_H_
 
