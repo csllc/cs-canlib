@@ -6,9 +6,9 @@ let can = new canlib({
   canRate: 250000,
   loopback: true,
   filters: [{
-      ext: true,
-      id: '10EF8000 10EFFFFF',
-    }]
+    ext: true,
+    id: '10EF8000 10EFFFFF',
+  }]
 
 });
 
@@ -16,8 +16,8 @@ can.list()
   .then((ports) => {
     return can.open(ports[0].path)
       .catch((err) => {
-	    console.error(err);
-	    process.exit(1);
+        console.error(err);
+        process.exit(1);
       });
   })
   .then(() => {
@@ -25,9 +25,9 @@ can.list()
                 ext: true,
                 buf: Buffer.from([0x45, 0x00, 0x00, 0x04, 0x00, 0x00]) });
   })
-  // .then(() => {
-  //   can.close();
-  // })
+// .then(() => {
+//   can.close();
+// })
   .catch((err) => {
     console.error(err);
     can.close();
