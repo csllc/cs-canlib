@@ -34,7 +34,6 @@ can.list()
     process.exit(1);
   });
 
-
 can.on('data', function(msg) {
   console.log("data: " + JSON.stringify(msg, (key, value) => {
     if ((typeof value === 'number') && (key == "id")) {
@@ -46,17 +45,4 @@ can.on('data', function(msg) {
     }
   }));
 });
-
-
-// can.on('write', function(msg) {
-//   console.log("write: " + JSON.stringify(msg, (key, value) => {
-//     if ((typeof value === 'number') && (key == "id")) {
-//       return value.toString(16).toUpperCase().padStart(8, '0');
-//     } else if (typeof value === 'number') {
-//       return value.toString(16).toUpperCase().padStart(2, '0');
-//     } else {
-//       return value;
-//     }
-//   }));
-// });
 
