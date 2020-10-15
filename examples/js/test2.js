@@ -5,7 +5,6 @@ const path = require('path');
 const canlib_path = binary.find(path.resolve(path.join(__dirname,'../../package.json')));
 const canlib = require(canlib_path);
 
-// Initialize CAN library
 canlib.InitializeLibrary();
 
 let channels = canlib.ChannelInfo();
