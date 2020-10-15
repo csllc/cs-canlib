@@ -125,3 +125,27 @@ int canlibTranslateBaud(int baudInt)
 
     return translated;
 }
+
+
+
+
+int canlibDumpBusStatistics(canBusStatistics *busStats)
+{
+    printf("canlibDumpBusStatistics:\n"
+           "  stdData = %lu\n"
+           "  stdRemote = %lu\n"
+           "  extData = %lu\n"
+           "  extRemote = %lu\n"
+           "  errFrame = %lu\n"
+           "  busLoad = %lu\n"
+           "  overruns = %lu\n",
+           busStats->stdData,
+           busStats->stdRemote,
+           busStats->extData,
+           busStats->extRemote,
+           busStats->errFrame,
+           busStats->busLoad,
+           busStats->overruns);
+
+    return 0;
+}

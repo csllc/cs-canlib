@@ -55,6 +55,10 @@ void canlibDumpBuffer(BYTE *buffer, size_t bufferLength);
 int canlibTranslateBaud(int baudInt);
 
 
+// Print the contents of a canBusStatistics struct to stdout in a human-readable
+// format for debugging purposes
+int canlibDumpBusStatistics(canBusStatistics *busStats);
+
 #endif // _CANLIB_HELPER_H_
 
 
