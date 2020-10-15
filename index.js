@@ -90,9 +90,6 @@ module.exports = class Canlib extends Duplex {
       // Go on-bus with main thread's handle
       canlib.BusOn(me.handle);
 
-      // Signal that the channel has been opened
-      me.isReady = true;
-      me.emit('open');
       resolve();
     })
       .then(function() {
@@ -125,6 +122,11 @@ module.exports = class Canlib extends Duplex {
           }
         }
 
+      })
+      .then(function() {
+        // Signal that the channel has been opened
+        me.isReady = true;
+        me.emit('open');
       })
       .catch(function(err) {
         me.emit('error', err);
@@ -219,9 +221,11 @@ module.exports = class Canlib extends Duplex {
     for (;;) {
       try {
         let read_obj = canlib.Read(me.handle_thread);
-        me.push(read_obj); // Emits 'data' event
+        me.push(canlibConsts.toMsg(read_obj)); // Emits 'data' event
       } catch(err) {
-        if (err.code != "No messages available") {
+        if (err.code == "No messages available") {
+          // No messages, so this event must have been signaled for another reason
+        } else {
           console.error("_onData() error: " + err.code);
         }
         break;
