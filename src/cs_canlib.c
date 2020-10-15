@@ -28,7 +28,7 @@
 
 
 // Length of N-API module descriptor list, used in Init
-enum { descriptors_len = 20 };
+enum { descriptors_len = 22 };
 
 
 
@@ -83,15 +83,17 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("WriteSync", canlib_canWriteSync),
         DECLARE_NAPI_METHOD("Read", canlib_canRead),
         DECLARE_NAPI_METHOD("ReadWait", canlib_canReadWait),
+        DECLARE_NAPI_METHOD("SetAcceptanceFilter", canlib_canSetAcceptanceFilter),
         DECLARE_NAPI_METHOD("FlushTransmitQueue", canlib_canFlushTransmitQueue),
         DECLARE_NAPI_METHOD("FlushReceiveQueue", canlib_canFlushReceiveQueue),
         DECLARE_NAPI_METHOD("ReadStatus", canlib_canReadStatus),
-        DECLARE_NAPI_METHOD("SetAcceptanceFilter", canlib_canSetAcceptanceFilter),
+        DECLARE_NAPI_METHOD("ResetBus", canlib_canResetBus),
         // Additional functions
         DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
         DECLARE_NAPI_METHOD("EnableEvent", canlib_canEnableEvent),
         DECLARE_NAPI_METHOD("DisableEvent", canlib_canDisableEvent),
         DECLARE_NAPI_METHOD("SetLoopback", canlib_canSetLoopback),
+        DECLARE_NAPI_METHOD("ClearErrorCounters", canlib_canClearErrorCounters),
     };
 
     status = napi_define_properties(env, exports, descriptors_len, descriptors);
@@ -1346,8 +1348,7 @@ napi_value canlib_canReadStatus(napi_env env, napi_callback_info info)
     if (canlibStatus < 0)
     {
         napi_throw_error(env, canlibStatusLookup(canlibStatus),
-                         "canlib_canFlushReceiveQueue: "
-                         "Error at canFlushReceiveQueue.");
+                         "canlib_canReadStatus: Error at canReadStatus.");
         return 0;
     }
 
@@ -1360,6 +1361,51 @@ napi_value canlib_canReadStatus(napi_env env, napi_callback_info info)
 }
 
 
+
+
+napi_value canlib_canResetBus(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANRESETBUS_ARGC;
+    napi_value argv[CANRESETBUS_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANRESETBUS_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    // Reset bus
+    canStatus canlibStatus;
+    canlibStatus = canResetBus(canlibHandle);
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canResetBus: Error at canResetBus.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_uint32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+    
 
 
 napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
@@ -1682,5 +1728,54 @@ napi_value canlib_canSetLoopback(napi_env env, napi_callback_info info)
 }
 
 
-           
-                            
+
+
+napi_value canlib_canClearErrorCounters(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Get callback info and argument list
+    size_t argc = CANCLEARERRORCOUNTERS_ARGC;
+    napi_value argv[CANCLEARERRORCOUNTERS_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANCLEARERRORCOUNTERS_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    uint32_t canlibHandle;
+    status = napi_get_value_uint32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    // Clear counter
+    canStatus canlibStatus;
+    canlibStatus = canIoCtl(canlibHandle, canIOCTL_CLEAR_ERROR_COUNTERS, 0, 0);
+
+    // Print result to console
+#ifdef CANLIB_DEBUG
+    printf("canlib_canClearErrorCounters:\n"
+           "  canlibStatus = %i (%s)\n",
+           canlibStatus, canlibStatusLookup(canlibStatus));
+#endif
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canlibSetLoopback");
+        return 0;
+    }
+
+    // Create a N-API value for the result and return it
+    napi_value result;
+    status = napi_create_uint32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
