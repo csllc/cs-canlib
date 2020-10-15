@@ -36,6 +36,7 @@
 #define CANGETBUSPARAMS_ARGC        (1)
 #define CANFLUSHTRANSMITQUEUE_ARGC  (1)
 #define CANFLUSHRECEIVEQUEUE_ARGC   (1)
+#define CANREADSTATUS_ARGC          (1)
 #define CANSETACCEPTANCEFILTER_ARGC (4)
 #define CANENABLEEVENT_ARGC         (3)
 #define CANDISABLEEVENT_ARGC        (1)
@@ -246,6 +247,14 @@ napi_value canlib_canFlushTransmitQueue(napi_env env, napi_callback_info info);
 // Returns canStatus from CANlib API call, wrapped in napi_value, and error is
 // thrown upon failure
 napi_value canlib_canFlushReceiveQueue(napi_env env, napi_callback_info info);
+
+
+// Read the CAN controller's status flags using the thread-specific CAN handle
+// Arguments passed through N-API:
+// - int handle
+// Returns unsigned long int containing status flags, wrapped in napi_value, and
+// error is thrown upon failure
+napi_value canlib_canReadStatus(napi_env env, napi_callback_info info);
 
 
 // Retrieve information for all available CAN channels

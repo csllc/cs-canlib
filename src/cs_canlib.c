@@ -85,6 +85,7 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("ReadWait", canlib_canReadWait),
         DECLARE_NAPI_METHOD("FlushTransmitQueue", canlib_canFlushTransmitQueue),
         DECLARE_NAPI_METHOD("FlushReceiveQueue", canlib_canFlushReceiveQueue),
+        DECLARE_NAPI_METHOD("ReadStatus", canlib_canReadStatus),
         DECLARE_NAPI_METHOD("SetAcceptanceFilter", canlib_canSetAcceptanceFilter),
         // Additional functions
         DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
@@ -1306,6 +1307,53 @@ napi_value canlib_canFlushReceiveQueue(napi_env env, napi_callback_info info)
     // Create an N-API value for the result and return it
     napi_value result;
     status = napi_create_int32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
+
+
+napi_value canlib_canReadStatus(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANREADSTATUS_ARGC;
+    napi_value argv[CANREADSTATUS_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANREADSTATUS_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retrieve arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    // Read status
+    canStatus canlibStatus;
+    unsigned long statusFlags;
+    canlibStatus = canReadStatus(canlibHandle, &statusFlags);
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canFlushReceiveQueue: "
+                         "Error at canFlushReceiveQueue.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_uint32(env, statusFlags, &result);
     assert(status == napi_ok);
 
     return result;
