@@ -151,7 +151,9 @@ DWORD WINAPI canlibEventThreadProc(LPVOID lpParam)
     }
     else
     {
+#ifdef CANLIB_EVENT_DEBUG
         printf("canlibThreadHandle = %i\n", canlibThreadHandle);
+#endif
     }
 
     // Release the mutex
@@ -188,7 +190,9 @@ DWORD WINAPI canlibEventThreadProc(LPVOID lpParam)
     }
     else
     {
+#ifdef CANLIB_EVENT_DEBUG
         printf("canlibEventThreadProc: canlibEventRead = 0x%p\n", canlibEventRead);
+#endif
     }
 
     // Signal the spawn event, indicating that the worker thread is running
@@ -404,8 +408,6 @@ int canlibEventEnable(int canlibChannel, int canlibFlags, void *callback)
                                  events, // lpHandles
                                  true, // bWaitAll
                                  INFINITE); // dwMilliseconds
-
-    printf("canlibEventEnable: ret = %i\n", ret);
 
     if (ret & WAIT_ABANDONED_0)
     {
