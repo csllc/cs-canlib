@@ -1177,10 +1177,12 @@ napi_value canlib_canSetAcceptanceFilter(napi_env env, napi_callback_info info)
     // Print result to console
 #ifdef CANLIB_DEBUG
     printf("canSetAcceptanceFilter:\n"
+           "  canlibStatus     = %i\n"
            "  canlibHandle     = 0x%02X\n"
            "  canlibCode       = 0x%08X\n"
            "  canlibMask       = 0x%08X\n"
            "  canlibIsExtended = %i\n",
+           canlibStatus,
            canlibHandle,
            canlibCode,
            canlibMask,
