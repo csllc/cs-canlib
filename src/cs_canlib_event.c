@@ -3,8 +3,8 @@
    Functions that control the use of a Win32 event provided by the CANlib
    library to signal that received data is available for reading. When enabled,
    a worker thread is spawned that waits on this event and invokes a callback
-   function when its state changes to signaled, which presumably calls canread()
-   to retreive the newly received data.
+   function when its state changes to signaled, which presumably calls canRead()
+   to retrieve the newly received data.
 
    Copyright (c) 2020 Control Solutions LLC. All rights reserved.
 */
@@ -351,7 +351,7 @@ int canlibEventEnable(int canlibChannel, int canlibFlags, void *callback)
 
     // Create mutex that will control access to a variable containing the thread's
     // own Canlib handle, canlibThreadHandle
-    canlibThreadHandleMutex = CreateMutex(&canlibSecurityAttr, // libMutexAttributes
+    canlibThreadHandleMutex = CreateMutex(&canlibSecurityAttr, // lpMutexAttributes
                                           true, // bInitialOwner
                                           canlibThreadHandleMutexName); // lpName
 

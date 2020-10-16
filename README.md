@@ -140,7 +140,7 @@ acceptance_mask = ~(fromID ^ toID)
 ```
 
 This module implements the same behavior specified by the [CAN-USB-COM manual](https://gridconnect.box.com/shared/static/c7l5u2vgsid1a24y6r0a0wv5hwaunr71.pdf):
- - When [filtering is] disabled, all CAN messages are received regarldess of the definitions in the list
+ - When [filtering is] disabled, all CAN messages are received regardless of the definitions in the list
  - When [filtering is] enabled, only messages which match filter definitions in the list will be passed through.
  
 To achieve this, if only one type of filter (standard or extended) is specified, an all-blocking filter will be applied for the unspecified type.
@@ -186,7 +186,7 @@ This module takes advantage of the asynchronous message receive notification off
 
 In the future, it may make sense to move the call to `canRead()` directly into the native code to improve performance.
 
-This module receives a Win32 event handle from the CANlib API through the `canIoCtl(..., canIOCTL_GET_EVENTHANDLE, ...)` API call, which gets signaled upon internal events that ocurr in the driver, including receipt of a CAN message that is accepted by the message filter. A Win32 thread waits on the event using `WaitForMultipleObjects`, invokes a callback function when signaled, and resets itself for the next message.
+This module receives a Win32 event handle from the CANlib API through the `canIoCtl(..., canIOCTL_GET_EVENTHANDLE, ...)` API call, which gets signaled upon internal events that occur in the driver, including receipt of a CAN message that is accepted by the message filter. A Win32 thread waits on the event using `WaitForMultipleObjects`, invokes a callback function when signaled, and resets itself for the next message.
 
 CANlib differs from PCAN-Basic in how handles to CAN adapters are managed. Under CANlib, each thread must individually  open the channel (calling `canOpenChannel`) and go on-bus (`canBusOn`) before it can interact with the channel; handles to an adapter cannot be shared and passed between threads. Failing to do so and attempting to write messages to the bus will result in a transmit buffer overflow. Other API calls made against a handle not owned by the calling thread will fail silently.
 

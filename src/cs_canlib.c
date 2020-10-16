@@ -649,7 +649,7 @@ napi_value canlib_canGetBusParams(napi_env env, napi_callback_info info)
     unsigned int canlibNoSamp;
     unsigned int canlibSyncmode;
 
-    // Retreive bus parameters
+    // Retrieve bus parameters
     canStatus canlibStatus;
     canlibStatus = canGetBusParams(canlibHandle,
                                    &canlibFreq,

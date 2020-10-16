@@ -100,7 +100,7 @@ napi_value canlib_canOpenChannel(napi_env env, napi_callback_info info);
 
 
 // Closes instance of CAN channel for the calling thread
-// Arguments pasesd through N-API:
+// Arguments passed through N-API:
 // - int handle
 // Returns canStatus from CANlib API call, wrapped in napi_value, and error is
 // thrown upon failure
@@ -149,7 +149,7 @@ napi_value canlib_canTranslateBaud(napi_env env, napi_callback_info info);
 // - tseg2 (uint32)
 // - sjw (uint32)
 // - noSamp (uint32)
-// Note that syncmod is omitted. Returns canStatus from CANlib API call, wrapped in
+// Note that syncmode is omitted. Returns canStatus from CANlib API call, wrapped in
 // napi_value, and error is thrown upon failure.
 napi_value canlib_canSetBusParams(napi_env env, napi_callback_info info);
 
@@ -172,7 +172,7 @@ napi_value canlib_canGetBusParams(napi_env env, napi_callback_info info);
 // Arguments passed through N-API:
 // - int handle
 // - msg (N-API object)
-// msg is an object containing the following propertie:
+// msg is an object containing the following properties:
 // - id (int32)
 // - buf (Buffer)
 // - dlc (uint32)
@@ -202,7 +202,7 @@ napi_value canlib_canWriteSync(napi_env env, napi_callback_info info);
 // - flag (uint32)
 // - time (uint32)
 // Error is thrown upon failure. Particularly, err.code == "No messages available"
-// when the read is unsucessful because there are no messages in the receive
+// when the read is unsuccessful because there are no messages in the receive
 // buffer.
 napi_value canlib_canRead(napi_env env, napi_callback_info info);
 
@@ -219,7 +219,7 @@ napi_value canlib_canRead(napi_env env, napi_callback_info info);
 // - flag (uint32)
 // - time (uint32)
 // Error is thrown upon failure. Particularly, err.code == "No messages available"
-// when the read is unsucessful because there are no messages in the receive
+// when the read is unsuccessful because there are no messages in the receive
 // buffer.
 napi_value canlib_canReadWait(napi_env env, napi_callback_info info);
 
@@ -274,7 +274,7 @@ napi_value canlib_canResetBus(napi_env env, napi_callback_info info);
 // Returns N-API array containing objects with the following properties:
 // - channel (int)
 // - channel_type (int)
-// Array indicies correspond to channel numbers as reported by the API.
+// Array indices correspond to channel numbers as reported by the API.
 // Error is thrown upon failure.
 napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info);
 
