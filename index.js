@@ -38,7 +38,8 @@ module.exports = class Canlib extends Duplex {
     this.options = Object.assign(DEFAULT_OPTIONS, options);
   }
 
-  // Returns a promise that resolves to a list of available CAN ports
+  // Returns a promise that resolves to a list of available CAN channels
+  // These channels get passed to this.open() and ultimately can.EnableEvent()
   list() {
     var me = this;
 
