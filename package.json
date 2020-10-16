@@ -1,9 +1,8 @@
 {
-  "name": "cs-canlib",
-  "version": "0.1.1",
+  "name": "@csllc/cs-canlib",
+  "version": "0.1.2",
   "description": "CANlib module for NodeJS",
   "main": "index.js",
-  "private": true,
   "license": "MIT",
   "author": "cwalden@controls.com",
   "dependencies": {

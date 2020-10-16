@@ -3,7 +3,6 @@
 
 *.exe
 *.exp
-*.lib
 *.obj
 
 *~
