@@ -289,7 +289,7 @@ napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info);
 // channel and flags should match the values passed to OpenChannel when the
 // module is initialized
 // Returns result of canlibEventEnable, wrapped in napi_value, and error is
-// thrown upon failure
+// thrown upon failure. 0 is also returned upon failure.
 napi_value canlib_canEnableEvent(napi_env env, napi_callback_info info);
 
 

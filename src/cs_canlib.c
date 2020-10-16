@@ -1149,7 +1149,7 @@ napi_value canlib_canSetAcceptanceFilter(napi_env env, napi_callback_info info)
     if (argc != CANSETACCEPTANCEFILTER_ARGC)
     {
         napi_throw_type_error(env, 0, "Incorrect number of arguments.");
-        return -1;
+        return 0;
     }
 
     // Retrieve or check arguments
@@ -1543,7 +1543,7 @@ napi_value canlib_canEnableEvent(napi_env env, napi_callback_info info)
     if (argc != CANENABLEEVENT_ARGC)
     {
         napi_throw_type_error(env, 0, "Incorrect number of arguments.");
-        return -1;
+        return 0;
     }
 
     // Retrieve or check arguments
@@ -1562,7 +1562,7 @@ napi_value canlib_canEnableEvent(napi_env env, napi_callback_info info)
     if (canlibCallbackType != napi_function)
     {
         napi_throw_type_error(env, 0, "Argument 2 (Callback) is not a function.");
-        return -1;
+        return 0;
     }
 
     // Create resource name string, used below
@@ -1601,7 +1601,7 @@ napi_value canlib_canEnableEvent(napi_env env, napi_callback_info info)
     {
         napi_throw_error(env, 0,
                          "canlib_canEnableEvent: Error at canlibEventEnable");
-        return -1; // TODO: This function returns negative value on error
+        return 0;
     }
 
     // Create a N-API value for the handle (or error) and return it
