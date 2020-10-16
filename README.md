@@ -188,6 +188,8 @@ In the future, it may make sense to move the call to `canRead()` directly into t
 
 This module receives a Win32 event handle from the CANlib API through the `canIoCtl(..., canIOCTL_GET_EVENTHANDLE, ...)` API call, which gets signaled upon internal events that ocurr in the driver, including receipt of a CAN message that is accepted by the message filter. A Win32 thread waits on the event using `WaitForMultipleObjects`, invokes a callback function when signaled, and resets itself for the next message.
 
+CANlib differs from PCAN-Basic in how handles to CAN adapters are managed. Under CANlib, each thread must individually  open the channel (calling `canOpenChannel`) and go on-bus (`canBusOn`) before it can interact with the channel; handles to an adapter cannot be shared and passed between threads. Failing to do so and attempting to write messages to the bus will result in a transmit buffer overflow. Other API calls made against a handle not owned by the calling thread will fail silently.
+
 ## API
 
 This module's API functions generally return Promises, which are resolved or rejected when a request is complete. 
