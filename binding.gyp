@@ -23,10 +23,7 @@
             "files": [ "<(PRODUCT_DIR)/<(module_name).node" ],
             "conditions": [
                 [ "OS=='win'", {
-                    "files": [
-                        "ext/canlib-win32-x64/bin/canlib32.dll",
-                        "ext/canlib-win32-x64/lib/canlib32.lib"
-                    ]
+                    "files": [ "ext/canlib-win32-x64/bin/canlib32.dll" ]
                 } ]
             ],
             "destination": "<(module_path)"
