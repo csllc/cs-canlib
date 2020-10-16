@@ -9,11 +9,6 @@
         "conditions": [
             [ "OS=='win'", {
                 "sources": [ ],
-                "msvs_settings": {
-                    'VCCompilerTool': {
-                        'AdditionalOptions': [ '/verbosity:diag' ],
-                    }
-                },
                 "include_dirs": [ "ext/canlib-win32-x64/include" ],
                 "library_dirs": [ "ext/canlib-win32-x64/lib" ],
                 "link_settings": { "libraries": [ "-lcanlib32" ] }
@@ -28,7 +23,10 @@
             "files": [ "<(PRODUCT_DIR)/<(module_name).node" ],
             "conditions": [
                 [ "OS=='win'", {
-                    "files": [ "ext/canlib-win32-x64/bin/canlib32.dll" ]
+                    "files": [
+                        "ext/canlib-win32-x64/bin/canlib32.dll",
+                        "ext/canlib-win32-x64/lib/canlib32.lib"
+                    ]
                 } ]
             ],
             "destination": "<(module_path)"
