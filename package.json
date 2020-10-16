@@ -1,14 +1,17 @@
 {
   "name": "cs-canlib",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CANlib module for NodeJS",
   "main": "index.js",
   "private": true,
+  "license": "MIT",
+  "author": "cwalden@controls.com",
   "dependencies": {
     "@csllc/j1939": "^1.0.0",
     "bindings": "~1.2.1",
     "can-usb-com": "^4.0.0",
     "eslint": "^7.10.0",
+    "node-gyp": "^7.1.1",
     "node-pre-gyp": "^0.15.0",
     "stream": "0.0.2"
   },

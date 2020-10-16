@@ -12,7 +12,7 @@ The following assumes that [NodeJS](https://nodejs.org) is already installed. Th
 
 To install this module, run:
 ```
-npm install {FIXME: URL/package to be determined}
+npm install @csllc/cs-canlib
 ```
 
 The following is a sample script that opens the CAN port, writes a single message to the bus, and listens for and prints received messages from the bus.
