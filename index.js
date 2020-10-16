@@ -109,18 +109,7 @@ module.exports = class Canlib extends Duplex {
         canlib.SetLoopback(me.handle_thread, me.options.loopback);
 
         // Set acceptance filter for the event thread's handle
-        if (me.options.filters.length > 0) {
-          for (let i in me.options.filters) {
-            try {
-              let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
-              canlib.SetAcceptanceFilter(me.handle_thread, filt.code,
-                                         filt.mask, filt.ext);
-            } catch (err) {
-              console.error(err);
-              throw new Error(err);
-            }
-          }
-        }
+        me._setAcceptanceFilters(me.handle_thread);
 
       })
       .then(function() {
@@ -247,19 +236,52 @@ module.exports = class Canlib extends Duplex {
                         canlib.TranslateBaud(me.options.canRate));
 
     // Set filters
+    me._setAcceptanceFilters(me.handle)
+  }
+
+  _setAcceptanceFilters(handle) {
+    let me = this;
+
     if (me.options.filters.length > 0) {
-      for (let i in me.options.filters) {
-        try {
-          let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
-          canlib.SetAcceptanceFilter(me.handle, filt.code, filt.mask, filt.ext);
-        } catch (err) {
-          console.error(err);
-          throw new Error(err);
+      // Standard filter
+      if (me.options.filters.some((f) => { return (f.ext == false); })) {
+        // If any of the filters in the array are for standard messages, apply them
+        for (let i in me.options.filters) {
+          if (me.options.filters[i].ext == false) {
+            try {
+              let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
+              canlib.SetAcceptanceFilter(handle, filt.code, filt.mask, filt.ext);
+            } catch (err) {
+              console.error(err);
+              throw new Error(err);
+            }
+          }
         }
+      } else {
+        // Otherwise, apply a filter that blocks all standard messages
+        canlib.SetAcceptanceFilter(handle, 0xFFFFFFFF, 0xFFFFFFFF, false);
+      }
+
+      if (me.options.filters.some((f) => { return (f.ext == true); })) {
+        // If any of the filters in the array are for extended messages, apply them
+        for (let i in me.options.filters) {
+          if (me.options.filters[i].ext == true) {
+            try {
+              let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
+              canlib.SetAcceptanceFilter(handle, filt.code, filt.mask, filt.ext);
+            } catch (err) {
+              console.error(err);
+              throw new Error(err);
+            }
+          }
+        }
+      } else {
+        // Otherwise, apply a filter that blocks all extended messages
+        canlib.SetAcceptanceFilter(handle, 0xFFFFFFFF, 0xFFFFFFFF, true);
       }
     }
   }
-
 }
+
 
 
