@@ -76,6 +76,9 @@ module.exports = class Canlib extends Duplex {
     var me = this;
 
     return new Promise(function(resolve) {
+      // Initialize CAN library, if not already done
+      canlib.InitializeLibrary();
+
       // Save channel for posterity
       me.channel = channel;
       
