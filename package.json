@@ -5,6 +5,9 @@
   "main": "index.js",
   "license": "MIT",
   "author": "cwalden@controls.com",
+  "os": [
+    "win32"
+  ],
   "dependencies": {
     "@csllc/j1939": "^1.0.0",
     "bindings": "~1.2.1",
