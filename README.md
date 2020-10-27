@@ -203,7 +203,7 @@ Refer to the CANlib documentation for more details on the API that this module i
 Before updating or modifying this package, please
 
  - Lint any changes using `eslint`.
- - Confirm that unit tests pass, noting the exceptions described in the next section.
+ - Confirm that unit tests pass.
 
 In order to run unit tests (`npm test`), at least one Kvaser device must be connected to the computer.
 
