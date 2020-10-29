@@ -9,9 +9,9 @@
     "win32"
   ],
   "dependencies": {
-    "@csllc/j1939": "^1.0.0",
+    "@csllc/j1939": "^1.1.1",
     "bindings": "~1.2.1",
-    "can-usb-com": "^4.0.0",
+    "can-usb-com": "^4.0.1",
     "eslint": "^7.10.0",
     "node-gyp": "^7.1.1",
     "node-pre-gyp": "^0.15.0",
