@@ -12,8 +12,29 @@
 #include <canlib.h>      // provide CANlib API functions
 #include <canstat.h>     // provide CANlib status constants
 
+#include "common_helper.h" // provide lookupString and lookup_t
+
+
 // ----------------------------------- // -----------------------------------
 // Definitions
+
+
+const lookup_t canlibFlags[] = {
+    { 0,                     "OK" },
+    { canSTAT_ERROR_PASSIVE, "canSTAT_ERROR_PASSIVE" },
+    { canSTAT_BUS_OFF,       "canSTAT_BUS_OFF" },
+    { canSTAT_ERROR_WARNING, "canSTAT_ERROR_WARNING" },
+    { canSTAT_ERROR_ACTIVE,  "canSTAT_ERROR_ACTIVE" },
+    { canSTAT_TX_PENDING,    "canSTAT_TX_PENDING" },
+    { canSTAT_RX_PENDING,    "canSTAT_RX_PENDING" },
+    { canSTAT_RESERVED_1,    "canSTAT_RESERVED_1" },
+    { canSTAT_TXERR,         "canSTAT_TXERR" },
+    { canSTAT_RXERR,         "canSTAT_RXERR" },
+    { canSTAT_HW_OVERRUN,    "canSTAT_HW_OVERRUN" },
+    { canSTAT_SW_OVERRUN,    "canSTAT_SW_OVERRUN" },
+    { canSTAT_OVERRUN,       "canSTAT_OVERRUN" },
+    { 0, 0 }
+};
 
 
 
@@ -149,3 +170,26 @@ int canlibDumpBusStatistics(canBusStatistics *busStats)
 
     return 0;
 }
+
+
+
+
+int canlibGetFlagString(int status, char *text, size_t text_len)
+{
+    int i;
+    int offset = 0;
+
+    offset = snprintf(text, text_len, "canlib status: ");
+
+    for (i = 0; canlibFlags[i].string; i++)
+    {
+        if (status & canlibFlags[i].value)
+        {
+            offset += snprintf(text+offset, text_len-offset, "%s (0x%04X) ",
+                               canlibFlags[i].string, canlibFlags[i].value);
+        }
+    }
+
+    return 0;
+}
+

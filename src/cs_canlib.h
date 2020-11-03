@@ -38,11 +38,13 @@
 #define CANFLUSHRECEIVEQUEUE_ARGC   (1)
 #define CANREADSTATUS_ARGC          (1)
 #define CANRESETBUS_ARGC            (1)
+#define CANGETERRORTEXT_ARGC        (1)
 #define CANSETACCEPTANCEFILTER_ARGC (4)
 #define CANENABLEEVENT_ARGC         (3)
 #define CANDISABLEEVENT_ARGC        (1)
 #define CANSETLOOPBACK_ARGC         (2)
 #define CANCLEARERRORCOUNTERS_ARGC  (1)
+#define CANGETFLAGTEXT_ARGC         (1)
 
 
 
@@ -268,6 +270,14 @@ napi_value canlib_canReadStatus(napi_env env, napi_callback_info info);
 napi_value canlib_canResetBus(napi_env env, napi_callback_info info);
 
 
+// Given an error code defined in canstat.h, return the corresponding
+// human-readable text as a string
+// Arguments passed through N-API:
+// - int error
+// Returns string wrapped in napi_value, and error is thrown upon failure
+napi_value canlib_canGetErrorText(napi_env env, napi_callback_info info);
+
+
 // Retrieve information for all available CAN channels
 // Arguments passed through N-API:
 // - (none)
@@ -316,6 +326,14 @@ napi_value canlib_canSetLoopback(napi_env env, napi_callback_info info);
 // Returns canStatus from CANlib API call, wrapped in napi_value, and error is
 // thrown upon failure
 napi_value canlib_canClearErrorCounters(napi_env env, napi_callback_info info);
+
+
+// Given a value consisting of one or more canSTAT flags defined in canstat.h,
+// return a string representation
+// Arguments passed through N-API:
+// - int flags
+// Returns string wrapped in napi_value, and error is thrown upon failure
+napi_value canlib_canGetFlagText(napi_env env, napi_callback_info info);
 
 
 #endif // _CS_CANLIB_H_

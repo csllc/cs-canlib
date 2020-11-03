@@ -28,7 +28,7 @@
 
 
 // Length of N-API module descriptor list, used in Init
-enum { descriptors_len = 22 };
+enum { descriptors_len = 24 };
 
 
 
@@ -88,12 +88,14 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("FlushReceiveQueue", canlib_canFlushReceiveQueue),
         DECLARE_NAPI_METHOD("ReadStatus", canlib_canReadStatus),
         DECLARE_NAPI_METHOD("ResetBus", canlib_canResetBus),
+        DECLARE_NAPI_METHOD("GetErrorText", canlib_canGetErrorText),
         // Additional functions
         DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
         DECLARE_NAPI_METHOD("EnableEvent", canlib_canEnableEvent),
         DECLARE_NAPI_METHOD("DisableEvent", canlib_canDisableEvent),
         DECLARE_NAPI_METHOD("SetLoopback", canlib_canSetLoopback),
         DECLARE_NAPI_METHOD("ClearErrorCounters", canlib_canClearErrorCounters),
+        DECLARE_NAPI_METHOD("GetFlagText", canlib_canGetFlagText),
     };
 
     status = napi_define_properties(env, exports, descriptors_len, descriptors);
@@ -1410,6 +1412,55 @@ napi_value canlib_canResetBus(napi_env env, napi_callback_info info)
     
 
 
+napi_value canlib_canGetErrorText(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANGETERRORTEXT_ARGC;
+    napi_value argv[CANGETERRORTEXT_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANGETERRORTEXT_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
+                              "This implementation of canGetErrorText accepts 1 argument.");
+        return 0;
+    }
+
+    // Retreive argument
+    uint32_t canErrorInt;
+    status = napi_get_value_uint32(env, argv[0], &canErrorInt);
+    assert(status == napi_ok);
+
+    // Create buffer for error text
+    char canErrorText[256] = { 0 };
+
+    // Get error text
+    canStatus canlibStatus;
+    canlibStatus = canGetErrorText(canErrorInt, canErrorText, sizeof(canErrorText));
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canGetErrorText: Error at canGetErrorText.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_string_utf8(env, canErrorText, NAPI_AUTO_LENGTH, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
+
+
 napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
 {
     napi_status status = napi_generic_failure;
@@ -1780,4 +1831,53 @@ napi_value canlib_canClearErrorCounters(napi_env env, napi_callback_info info)
 
     return result;
 }
+
+
+
+
+napi_value canlib_canGetFlagText(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANGETFLAGTEXT_ARGC;
+    napi_value argv[CANGETFLAGTEXT_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANGETFLAGTEXT_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retreive argument
+    uint32_t canFlagInt;
+    status = napi_get_value_uint32(env, argv[0], &canFlagInt);
+    assert(status == napi_ok);
+
+    // Create buffer for error text
+    char canFlagText[256] = { 0 };
+
+    // Call helper function to generate string
+    canStatus canlibStatus;
+    canlibStatus = canlibGetFlagString(canFlagInt, canFlagText, sizeof(canFlagText));
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canGetFlagText: Error at canGetErrorText.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_string_utf8(env, canFlagText, NAPI_AUTO_LENGTH, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
 

@@ -59,6 +59,11 @@ int canlibTranslateBaud(int baudInt);
 // format for debugging purposes
 int canlibDumpBusStatistics(canBusStatistics *busStats);
 
+
+// Build a string containing text corresponding to each canSTAT_ flag set in status
+int canlibGetFlagString(int status, char *text, size_t text_len);
+
+
 #endif // _CANLIB_HELPER_H_
 
 
