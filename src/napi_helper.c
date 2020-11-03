@@ -97,9 +97,9 @@ void napiDumpValue(napi_env env, napi_value value, char* name)
     status = napi_typeof(env, value, &vt);
     if (status != napi_ok)
     {
-	printf("napiDumpValue: Error at napi_typeof: %s",
-	       napiStatusLookup(status));
-	return;
+        printf("napiDumpValue: Error at napi_typeof: %s",
+               napiStatusLookup(status));
+        return;
     }
 
     // Empty variables to be filled with napi_get_value_* results, depending
@@ -115,94 +115,79 @@ void napiDumpValue(napi_env env, napi_value value, char* name)
     
     switch (vt) {
     case napi_undefined:
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer), "undefined");
-	break;
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer), "undefined");
+        break;
     case napi_null:
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer), "null");
-	break;
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer), "null");
+        break;
     case napi_boolean:
-	status = napi_get_value_bool(env, value, &napiValueBool);
-	if (status != napi_ok)
-	{
-	    printf("napiDumpValue: Error at napi_get_value_bool: %s",
-		   napiStatusLookup(status));
-	}
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer), "%s",
-		 napiValueBool ? "true" : "false");
-	break;
+        status = napi_get_value_bool(env, value, &napiValueBool);
+        if (status != napi_ok)
+        {
+            printf("napiDumpValue: Error at napi_get_value_bool: %s",
+                   napiStatusLookup(status));
+        }
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer), "%s",
+                 napiValueBool ? "true" : "false");
+        break;
     case napi_number:
-	// Assume int64
-	status = napi_get_value_int64(env, value, &napiValueInt64);
-	if (status != napi_ok)
-	{
-	    printf("napiDumpValue: Error at napi_get_value_int64: %s",
-		   napiStatusLookup(status));
-	}
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer), "0x%llX = %lli",
-		 (uint64_t)napiValueInt64, napiValueInt64);
-	break;
+        // Assume int64
+        status = napi_get_value_int64(env, value, &napiValueInt64);
+        if (status != napi_ok)
+        {
+            printf("napiDumpValue: Error at napi_get_value_int64: %s",
+                   napiStatusLookup(status));
+        }
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer), "0x%llX = %lli",
+                 (uint64_t)napiValueInt64, napiValueInt64);
+        break;
     case napi_string:
-	status = napi_get_value_string_utf8(env,
-					    value,
-					    napiValueStringBuffer,
-					    sizeof(napiValueStringBuffer),
-					    &napiValueStringResult);
-	if (status != napi_ok)
-	{
-	    printf("napiDumpValue: Error at napi_get_string_utf8: %s",
-		   napiStatusLookup(status));
-	}
-	strncpy(napiValueBuffer, napiValueStringBuffer, sizeof(napiValueBuffer));
-	break;
+        status = napi_get_value_string_utf8(env,
+                                            value,
+                                            napiValueStringBuffer,
+                                            sizeof(napiValueStringBuffer),
+                                            &napiValueStringResult);
+        if (status != napi_ok)
+        {
+            printf("napiDumpValue: Error at napi_get_string_utf8: %s",
+                   napiStatusLookup(status));
+        }
+        strncpy(napiValueBuffer, napiValueStringBuffer, sizeof(napiValueBuffer));
+        break;
     case napi_symbol:
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer), "[symbol]");
-	break;
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer), "[symbol]");
+        break;
     case napi_object:
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer), "[object]");
-	break;
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer), "[object]");
+        break;
     case napi_function:
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer), "[function]");
-	break;
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer), "[function]");
+        break;
     case napi_external:
-	status = napi_get_value_external(env, value, &napiValueExternalPtr);
-	if (status != napi_ok)
-	{
-	    printf("napiDumpValue: Error at napi_get_external: %s",
-		   napiStatusLookup(status));
-	}
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer),
-		 "%p", napiValueExternalPtr);
-	break;
-    case napi_bigint:
-	// Assume int64
-	status = napi_get_value_bigint_int64(env, value, &napiValueInt64,
-					     &napiValueBool);
-	if (status != napi_ok)
-	{
-	    printf("napiDumpValue: Error at napi_get_value_bigint_int64: %s",
-		   napiStatusLookup(status));
-	}
-	snprintf(napiValueBuffer, sizeof(napiValueBuffer),
-		 "0x%llX = %lli (lossless=%s)",
-		 (uint64_t)napiValueInt64,
-		 napiValueInt64,
-		 napiValueBool ? "true" : "false");
-	break;
+        status = napi_get_value_external(env, value, &napiValueExternalPtr);
+        if (status != napi_ok)
+        {
+            printf("napiDumpValue: Error at napi_get_external: %s",
+                   napiStatusLookup(status));
+        }
+        snprintf(napiValueBuffer, sizeof(napiValueBuffer),
+                 "%p", napiValueExternalPtr);
+        break;
     }
 
     // Print result
     if (name != 0)
     {
-	printf("napiDumpValue: (%s) %s = %s\n",
-	       napiValuetypeLookup(vt),
-	       name,
-	       napiValueBuffer);
+        printf("napiDumpValue: (%s) %s = %s\n",
+               napiValuetypeLookup(vt),
+               name,
+               napiValueBuffer);
     }
     else
     {
-	printf("napiDumpValue: (%s) = %s\n",
-	       napiValuetypeLookup(vt),
-	       napiValueBuffer);
+        printf("napiDumpValue: (%s) = %s\n",
+               napiValuetypeLookup(vt),
+               napiValueBuffer);
     }
 
     return;
@@ -242,16 +227,16 @@ bool napiCheck(napi_env env, napi_status status)
 
     if (status != napi_ok)
     {
-	napi_get_last_error_info(env, &errorInfo);
-	napi_is_exception_pending(env, &exceptionPending);
+        napi_get_last_error_info(env, &errorInfo);
+        napi_is_exception_pending(env, &exceptionPending);
 
-	if (!exceptionPending)
-	{
-	    napiDumpErrorInfo(errorInfo);
-	    napi_throw_error(env, NULL,
-			     errorInfo->error_message);
-	}
-	return false;
+        if (!exceptionPending)
+        {
+            napiDumpErrorInfo(errorInfo);
+            napi_throw_error(env, NULL,
+                             errorInfo->error_message);
+        }
+        return false;
     }
 
     return true;
@@ -263,15 +248,15 @@ bool napiCheck(napi_env env, napi_status status)
 void napiDumpErrorInfo(const napi_extended_error_info *errorInfo)
 {
     printf("errorInfo {\n"
-	   "  error_message = \"%s\"\n"
-	   "  engine_reserved = %p\n"
-	   "  engine_error_code = 0x%02X\n"
-	   "  error_code = 0x%02X\n"
-	   "  }\n",
-	   errorInfo->error_message,
-	   errorInfo->engine_reserved,
-	   errorInfo->engine_error_code,
-	   errorInfo->error_code);
+           "  error_message = \"%s\"\n"
+           "  engine_reserved = %p\n"
+           "  engine_error_code = 0x%02X\n"
+           "  error_code = 0x%02X\n"
+           "  }\n",
+           errorInfo->error_message,
+           errorInfo->engine_reserved,
+           errorInfo->engine_error_code,
+           errorInfo->error_code);
 
     return;
 }
