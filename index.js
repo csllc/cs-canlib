@@ -22,14 +22,46 @@ module.exports = class Canlib extends Duplex {
 
     super({ objectMode: true });
 
+    let me = this;
+
     this.setOptions(options);
     this.requestQueue = [];
     this.channel = undefined
     this.handle = undefined;
-    this.handle_thread = undefined;
+    this.handleThread = undefined;
     this.isReady = false;
     this.handle = null;
     this.flags = 0;
+    this.status = {
+      code: undefined,
+      string: "",
+      isError: false,
+      notify() {
+        let status = { code: this.code, string: this.string, isError: this.isError };
+        me.emit('status', status);
+        console.debug(status);
+      },
+      get statusCode() { return this.code; },
+      set statusCode(code) {
+        let code_masked = (code & ~0x30); // Filter out pending flags
+        let same = (this.code & code_masked) ? true : false;
+        if (!same) {
+          this.code = code_masked;
+          if (this.code == 0) {
+            this.string = "Bus OK";
+            this.isError = false;
+          } else {
+            this.isError = true;
+            try {
+              this.string = canlib.GetFlagText(this.code);
+            } catch(err) {
+              console.error(err);
+            }
+          }
+          this.notify();
+        }
+      }
+    };
   }
 
   // Sets (or re-sets) the configuration options
@@ -105,15 +137,15 @@ module.exports = class Canlib extends Duplex {
         
         // Enable data event
         // - This opens a second handle to the channel and takes it on-bus
-        me.handle_thread = canlib.EnableEvent(me.channel, me.flags, function() {
+        me.handleThread = canlib.EnableEvent(me.channel, me.flags, function() {
           me.emit('_data');
         });
 
         // Set loopback for the event thread's handle
-        canlib.SetLoopback(me.handle_thread, me.options.loopback);
+        canlib.SetLoopback(me.handleThread, me.options.loopback);
 
         // Set acceptance filter for the event thread's handle
-        me._setAcceptanceFilters(me.handle_thread);
+        me._setAcceptanceFilters(me.handleThread);
 
       })
       .then(function() {
@@ -151,7 +183,7 @@ module.exports = class Canlib extends Duplex {
     })
       .then(function() {
         me.handle = undefined;
-        me.handle_thread = undefined;
+        me.handleThread = undefined;
         me.isReady = false;
         me.push(null);
       })
@@ -172,6 +204,10 @@ module.exports = class Canlib extends Duplex {
         canlib.Write(me.handle, canlibMsg);
         me.emit('write', msg);
      
+        // If status changed, the following will emit a 'status' event
+        canlib.RequestChipStatus(me.handle);
+        me.status.statusCode = canlib.ReadStatus(me.handle);
+        
         resolve();
       } else {
         throw new Error("Tried to send invalid CAN data");
@@ -199,7 +235,7 @@ module.exports = class Canlib extends Duplex {
   // Required function for cs-modbus GenericConnection
   isOpen() {
     return ((this.handle != undefined) &&
-            (this.handle_thread != undefined) &&
+            (this.handleThread != undefined) &&
             (this.isReady));
   }
 
@@ -213,7 +249,7 @@ module.exports = class Canlib extends Duplex {
     
     for (;;) {
       try {
-        let read_obj = canlib.Read(me.handle_thread);
+        let read_obj = canlib.Read(me.handleThread);
         me.push(canlibConsts.toMsg(read_obj)); // Emits 'data' event
       } catch(err) {
         if (err.code == "No messages available") {
@@ -224,6 +260,9 @@ module.exports = class Canlib extends Duplex {
         break;
       }
     }
+    // If status changed, the following will emit a 'status' event
+    canlib.RequestChipStatus(me.handleThread);
+    me.status.statusCode = canlib.ReadStatus(me.handleThread);
   }
 
   // Required for a readable stream; we don't need to do anything
@@ -285,6 +324,7 @@ module.exports = class Canlib extends Duplex {
       }
     }
   }
+
 }
 
 
