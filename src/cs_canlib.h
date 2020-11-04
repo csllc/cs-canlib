@@ -39,6 +39,8 @@
 #define CANREADSTATUS_ARGC          (1)
 #define CANRESETBUS_ARGC            (1)
 #define CANGETERRORTEXT_ARGC        (1)
+#define CANREADERRORCOUNTERS_ARGC   (1)
+#define CANREQUESTCHIPSTATUS_ARGC   (1)
 #define CANSETACCEPTANCEFILTER_ARGC (4)
 #define CANENABLEEVENT_ARGC         (3)
 #define CANDISABLEEVENT_ARGC        (1)
@@ -276,6 +278,23 @@ napi_value canlib_canResetBus(napi_env env, napi_callback_info info);
 // - int error
 // Returns string wrapped in napi_value, and error is thrown upon failure
 napi_value canlib_canGetErrorText(napi_env env, napi_callback_info info);
+
+
+// Read the error counters from the CAN controller and return an N-API object
+// containing txErr, rxErr, and ovErr
+// Arguments passed through N-API:
+// - int handle
+// Returns an N-API object, and error is thrown upon failure
+napi_value canlib_canReadErrorCounters(napi_env env, napi_callback_info info);
+
+
+// Asynchronously request status from chip, which can be retreived using
+// canReadStatus
+// Arguments passed through N-API:
+// - int handle
+// Returns canStatus from CANlib API call, wrapped in napi_value, and error is
+// thrown upon failure
+napi_value canlib_canRequestChipStatus(napi_env env, napi_callback_info info);
 
 
 // Retrieve information for all available CAN channels

@@ -28,7 +28,7 @@
 
 
 // Length of N-API module descriptor list, used in Init
-enum { descriptors_len = 24 };
+enum { descriptors_len = 26 };
 
 
 
@@ -89,6 +89,8 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("ReadStatus", canlib_canReadStatus),
         DECLARE_NAPI_METHOD("ResetBus", canlib_canResetBus),
         DECLARE_NAPI_METHOD("GetErrorText", canlib_canGetErrorText),
+        DECLARE_NAPI_METHOD("ReadErrorCounters", canlib_canReadErrorCounters),
+        DECLARE_NAPI_METHOD("RequestChipStatus", canlib_canRequestChipStatus),
         // Additional functions
         DECLARE_NAPI_METHOD("ChannelInfo", canlib_canChannelInfo),
         DECLARE_NAPI_METHOD("EnableEvent", canlib_canEnableEvent),
@@ -1345,7 +1347,7 @@ napi_value canlib_canReadStatus(napi_env env, napi_callback_info info)
 
     // Read status
     canStatus canlibStatus;
-    unsigned long statusFlags;
+    unsigned long statusFlags = 0;
     canlibStatus = canReadStatus(canlibHandle, &statusFlags);
 
     // Throw error, if any
@@ -1453,6 +1455,124 @@ napi_value canlib_canGetErrorText(napi_env env, napi_callback_info info)
     // Create an N-API value for the result and return it
     napi_value result;
     status = napi_create_string_utf8(env, canErrorText, NAPI_AUTO_LENGTH, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
+
+
+napi_value canlib_canReadErrorCounters(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANREADERRORCOUNTERS_ARGC;
+    napi_value argv[CANREADERRORCOUNTERS_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANREADERRORCOUNTERS_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
+                              "This implementation of canReadErrorCounters accepts 1 argument.");
+        return 0;
+    }
+
+    // Retreive argument
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    // Create variables to receive error counts into
+    int32_t canlibTxErr;
+    int32_t canlibRxErr;
+    int32_t canlibOvErr;
+
+    // Read error counters
+    canStatus canlibStatus;
+    canlibStatus = canReadErrorCounters(canlibHandle, &canlibTxErr,
+                                        &canlibRxErr, &canlibOvErr);
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canReadErrorCounters: Error at canReadErrorCounters.");
+        return 0;
+    }
+
+    // Create container object for error counter values
+    napi_value errorCounters;
+    status = napi_create_object(env, &errorCounters);
+    assert(status == napi_ok);
+
+    // Create properties within container object
+    napi_value txErr;
+    napi_create_int32(env, canlibTxErr, &txErr);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, errorCounters, "txErr", txErr);
+    assert(status == napi_ok);
+
+    napi_value rxErr;
+    napi_create_int32(env, canlibRxErr, &rxErr);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, errorCounters, "rxErr", rxErr);
+    assert(status == napi_ok);
+
+    napi_value ovErr;
+    napi_create_int32(env, canlibOvErr, &ovErr);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, errorCounters, "ovErr", ovErr);
+    assert(status == napi_ok);
+
+    // Return the errorCounters object
+    return errorCounters;
+}
+
+
+
+
+napi_value canlib_canRequestChipStatus(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = CANREQUESTCHIPSTATUS_ARGC;
+    napi_value argv[CANREQUESTCHIPSTATUS_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != CANREADERRORCOUNTERS_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments. "
+                              "This implementation of canReadErrorCounters accepts 1 argument.");
+        return 0;
+    }
+
+    // Retreive argument
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    // Request chip status
+    canStatus canlibStatus;
+    canlibStatus = canRequestChipStatus(canlibHandle);
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_canReadErrorCounters: Error at canReadErrorCounters.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_uint32(env, canlibStatus, &result);
     assert(status == napi_ok);
 
     return result;
