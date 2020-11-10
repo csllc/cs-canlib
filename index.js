@@ -103,7 +103,7 @@ module.exports = class Canlib extends Duplex {
       })
       .catch(function(err) {
         me.emit('error', err);
-        throw new Error(err);
+        throw err;
       });
   }
 
@@ -158,7 +158,7 @@ module.exports = class Canlib extends Duplex {
       })
       .catch(function(err) {
         me.emit('error', err);
-        throw new Error(err);
+        throw err;
       });
   }
 
@@ -192,7 +192,7 @@ module.exports = class Canlib extends Duplex {
       })
       .catch(function(err) {
         me.emit('error', err);
-        throw new Error(err);
+        throw err;
       });
   }
 
@@ -218,7 +218,7 @@ module.exports = class Canlib extends Duplex {
     })
       .catch(function(err) {
         me.emit('error', err);
-        throw new Error(err);
+        throw err;
       });
   }
 
@@ -231,7 +231,7 @@ module.exports = class Canlib extends Duplex {
     })
       .catch(function(err) {
         me.emit('error', err);
-        throw new Error(err);
+        throw err;
       });
   }
 
@@ -299,7 +299,7 @@ module.exports = class Canlib extends Duplex {
               canlib.SetAcceptanceFilter(handle, filt.code, filt.mask, filt.ext);
             } catch (err) {
               console.error(err);
-              throw new Error(err);
+              throw err;
             }
           }
         }
@@ -317,7 +317,7 @@ module.exports = class Canlib extends Duplex {
               canlib.SetAcceptanceFilter(handle, filt.code, filt.mask, filt.ext);
             } catch (err) {
               console.error(err);
-              throw new Error(err);
+              throw err;
             }
           }
         }
