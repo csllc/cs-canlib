@@ -50,6 +50,9 @@ module.exports = class Canlib extends Duplex {
           if (this.code == 0) {
             this.string = "Bus OK";
             this.isError = false;
+          } else if (this.code == 0x0008) {
+            this.string = canlib.GetFlagText(this.code);
+            this.isError = false;
           } else {
             this.isError = true;
             try {
