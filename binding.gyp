@@ -10,8 +10,15 @@
             [ "OS=='win'", {
                 "sources": [ ],
                 "include_dirs": [ "ext/canlib-win32-x64/include" ],
-                "library_dirs": [ "ext/canlib-win32-x64/lib" ],
-                "link_settings": { "libraries": [ "-lcanlib32" ] }
+                "link_settings": { "libraries": [ "-lcanlib32" ] },
+                "conditions": [
+                    [ "target_arch=='ia32'", {
+                        "library_dirs": [ "ext/canlib-win32-x64/lib/32" ]
+                    } ],
+                    [ "target_arch=='x64'", {
+                        "library_dirs": [ "ext/canlib-win32-x64/lib/64" ]
+                    } ]
+                ]
             } ]
         ]
     },
@@ -23,7 +30,14 @@
             "files": [ "<(PRODUCT_DIR)/<(module_name).node" ],
             "conditions": [
                 [ "OS=='win'", {
-                    "files": [ "ext/canlib-win32-x64/bin/canlib32.dll" ]
+                    "conditions": [
+                        [ "target_arch=='ia32'", {
+                            "files": [ "ext/canlib-win32-x64/bin/32/canlib32.dll" ]
+                        } ],
+                        [ "target_arch=='x64'", {
+                            "files": [ "ext/canlib-win32-x64/bin/64/canlib32.dll" ]
+                        } ]
+                    ]
                 } ]
             ],
             "destination": "<(module_path)"
