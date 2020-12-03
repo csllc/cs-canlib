@@ -39,7 +39,6 @@ module.exports = class Canlib extends Duplex {
       notify() {
         let status = { code: this.code, string: this.string, isError: this.isError };
         me.emit('status', status);
-        console.debug(status);
       },
       get statusCode() { return this.code; },
       set statusCode(code) {
@@ -76,8 +75,6 @@ module.exports = class Canlib extends Duplex {
   // Returns a promise that resolves to a list of available CAN channels
   // These channels get passed to this.open() and ultimately can.EnableEvent()
   list() {
-    var me = this;
-
     return new Promise(function(resolve) {
       // Initialize CAN library
       canlib.InitializeLibrary();
@@ -102,7 +99,6 @@ module.exports = class Canlib extends Duplex {
         return channels;
       })
       .catch(function(err) {
-        me.emit('error', err);
         throw err;
       });
   }
@@ -156,33 +152,36 @@ module.exports = class Canlib extends Duplex {
         me.isReady = true;
         me.emit('open');
       })
-      .catch(function(err) {
-        me.emit('error', err);
-        throw err;
+    .catch(function(err) {
+        me.emit('error', err); // emit() instead of throw, matching CAN-USB-COM behavior
       });
   }
 
   close() {
     let me = this;
 
-    return new Promise(function(resolve) {
-      // Remove listeners
-      me.removeAllListeners();
+    return new Promise(function(resolve, reject) {
+      if (me.handle === undefined) {
+        reject(new Error("CAN bus handle is undefined"));
+      } else {
+        // Remove listeners
+        me.removeAllListeners();
 
-      if (me.isOpen()) {
-        // Close event thread
-        canlib.DisableEvent(me.channel);
+        if (me.isOpen()) {
+          // Close event thread
+          canlib.DisableEvent(me.channel);
 
-        // Take the main thread's handle off-bus
-        canlib.BusOff(me.handle);
+          // Take the main thread's handle off-bus
+          canlib.BusOff(me.handle);
 
-        // Close the main thread's handle to the channel
-        canlib.Close(me.handle);
+          // Close the main thread's handle to the channel
+          canlib.Close(me.handle);
+        }
+
+        // Close stream
+        me.emit('close');
+        resolve();
       }
-
-      // Close stream
-      me.emit('close');
-      resolve();
     })
       .then(function() {
         me.handle = undefined;
@@ -191,7 +190,6 @@ module.exports = class Canlib extends Duplex {
         me.push(null);
       })
       .catch(function(err) {
-        me.emit('error', err);
         throw err;
       });
   }
@@ -199,38 +197,43 @@ module.exports = class Canlib extends Duplex {
   write(msg) {
     let me = this;
     
-    return new Promise(function(resolve) {
-      if (msg.buf.length <= 8) {
-
-        // Write message to bus
-        let canlibMsg = canlibConsts.toCanlibMsg(msg);
-        canlib.Write(me.handle, canlibMsg);
-        me.emit('write', msg);
-     
-        // If status changed, the following will emit a 'status' event
-        canlib.RequestChipStatus(me.handle);
-        me.status.statusCode = canlib.ReadStatus(me.handle);
-        
-        resolve();
+    return new Promise(function(resolve, reject) {
+      if (me.handle === undefined) {
+        reject(new Error("CAN bus handle is undefined"));
       } else {
-        throw new Error("Tried to send invalid CAN data");
+        if (msg.buf.length <= 8) {
+          // Write message to bus
+          let canlibMsg = canlibConsts.toCanlibMsg(msg);
+          canlib.Write(me.handle, canlibMsg);
+          me.emit('write', msg);
+          
+          // If status changed, the following will emit a 'status' event
+          canlib.RequestChipStatus(me.handle);
+          me.status.statusCode = canlib.ReadStatus(me.handle);
+          
+          resolve();
+        } else {
+          reject(new Error("Tried to send invalid CAN data"));
+        }
       }
     })
-      .catch(function(err) {
-        me.emit('error', err);
-        throw err;
-      });
+    .catch(function(err) {
+      throw err;
+    });
   }
 
   status() {
     let me = this;
 
-    return new Promise(function(resolve) {
-      let status = canlib.Status(me.handle);
-      resolve(status);
+    return new Promise(function(resolve, reject) {
+      if (me.handle === undefined) {
+        reject(new Error("CAN bus handle is undefined"));
+      } else {
+        let status = canlib.Status(me.handle);
+        resolve(status);
+      }
     })
       .catch(function(err) {
-        me.emit('error', err);
         throw err;
       });
   }
@@ -250,22 +253,26 @@ module.exports = class Canlib extends Duplex {
   _onData() {
     let me = this;
     
-    for (;;) {
-      try {
-        let read_obj = canlib.Read(me.handleThread);
-        me.push(canlibConsts.toMsg(read_obj)); // Emits 'data' event
-      } catch(err) {
-        if (err.code == "No messages available") {
-          // No messages, so this event must have been signaled for another reason
-        } else {
-          console.error("_onData() error: " + err.code);
+    if (me.handle === undefined) {
+      throw new Error("CAN bus handle is undefined");
+    } else {
+      for (;;) {
+        try {
+          let read_obj = canlib.Read(me.handleThread);
+          me.push(canlibConsts.toMsg(read_obj)); // Emits 'data' event
+        } catch(err) {
+          if (err.code == "No messages available") {
+            // No messages, so this event must have been signaled for another reason
+          } else {
+            console.error("_onData() error: " + err.code);
+          }
+          break;
         }
-        break;
       }
+      // If status changed, the following will emit a 'status' event
+      canlib.RequestChipStatus(me.handleThread);
+      me.status.statusCode = canlib.ReadStatus(me.handleThread);
     }
-    // If status changed, the following will emit a 'status' event
-    canlib.RequestChipStatus(me.handleThread);
-    me.status.statusCode = canlib.ReadStatus(me.handleThread);
   }
 
   // Required for a readable stream; we don't need to do anything
@@ -298,8 +305,7 @@ module.exports = class Canlib extends Duplex {
               let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
               canlib.SetAcceptanceFilter(handle, filt.code, filt.mask, filt.ext);
             } catch (err) {
-              console.error(err);
-              throw err;
+              me.emit('error', err);
             }
           }
         }
@@ -316,8 +322,7 @@ module.exports = class Canlib extends Duplex {
               let filt = canlibConsts.convertAcceptanceFilter(me.options.filters[i]);
               canlib.SetAcceptanceFilter(handle, filt.code, filt.mask, filt.ext);
             } catch (err) {
-              console.error(err);
-              throw err;
+              me.emit('error', err);
             }
           }
         }
