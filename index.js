@@ -81,7 +81,14 @@ module.exports = class Canlib extends Duplex {
 
       if (process.platform == "win32") {
         // If running on Windows, get channel data
-        resolve(canlib.ChannelInfo());
+        let channelInfo;
+        try {
+          channelInfo = canlib.ChannelInfo();
+        } catch(e) {
+          // Kvaser driver not installed or other problem
+          channelInfo = [];
+        }
+        resolve(channelInfo);
       } else {
         // If running on any other platform, we return an empty channel list in
         // an attempt to fail gracefully
