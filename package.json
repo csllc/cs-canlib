@@ -1,6 +1,6 @@
 {
   "name": "@csllc/cs-canlib",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "CANlib module for NodeJS",
   "main": "index.js",
   "license": "MIT",
@@ -9,15 +9,15 @@
     "win32"
   ],
   "dependencies": {
-    "@csllc/j1939": "^1.1.1",
     "bindings": "~1.2.1",
-    "can-usb-com": "^4.0.1",
     "eslint": "^7.10.0",
     "node-gyp": "^7.1.1",
     "node-pre-gyp": "^0.15.0",
     "stream": "0.0.2"
   },
   "devDependencies": {
+    "@csllc/j1939": "^1.1.1",
+    "can-usb-com": "^4.0.1",
     "chai": "^4.2.0",
     "chai-events": "0.0.3",
     "eslint-plugin-mocha": "^8.0.0",
