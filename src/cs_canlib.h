@@ -49,7 +49,10 @@
 #define CANGETFLAGTEXT_ARGC         (1)
 
 
-
+// Definition is missing from pinned SDK (FIXME?)
+#ifndef canHWTYPE_LEAF3
+#define canHWTYPE_LEAF3 90
+#endif
 
 // ----------------------------------- // -----------------------------------
 // Global variables

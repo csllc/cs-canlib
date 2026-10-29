@@ -1661,10 +1661,12 @@ napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
     napi_value channelInfoElementChannelType;
 
     // Add applicable channels (based on type) to N-API object
+    uint32_t outputIndex = 0;
     for (i = 0; i < canlibChannelCount; i++)
     {
-        // Only add the Leaf hardware series
-        if (canlibChannelTypes[i] == canHWTYPE_LEAF)
+        // Only add Leaf / Leaf3 hardware series
+        if ((canlibChannelTypes[i] == canHWTYPE_LEAF) ||
+            (canlibChannelTypes[i] == canHWTYPE_LEAF3))
         {
             // Create N-API object for array element
             status = napi_create_object(env, &channelInfoElement);
@@ -1687,7 +1689,7 @@ napi_value canlib_canChannelInfo(napi_env env, napi_callback_info info)
             assert(status == napi_ok);
 
             // Add complete element to array
-            status = napi_set_element(env, channelInfo, i, channelInfoElement);
+            status = napi_set_element(env, channelInfo, outputIndex++, channelInfoElement);
             assert(status == napi_ok);
         }
     }
