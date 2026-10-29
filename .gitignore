@@ -39,3 +39,6 @@ UserInterfaceState.xcuserstate
 doc/~*
 build/
 binding/
+
+# clangd index
+.cache/

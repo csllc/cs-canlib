@@ -1,0 +1,10 @@
+-xc
+-Inode_modules/node-api-headers/include
+-Iext/canlib-win32-x64/include
+-DNODE_GYP_MODULE_NAME=cs_canlib
+-DBUILDING_NODE_EXTENSION
+-DWIN32
+-D_WINDOWS
+-Wall
+-Wextra
+-Wno-unused-parameter
