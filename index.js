@@ -245,6 +245,21 @@ module.exports = class Canlib extends Duplex {
       });
   }
 
+  identify() {
+    let me = this;
+
+    return new Promise(function(resolve) {
+      // Briefly flash LED(s) on adapter
+      canlib.FlashLeds(me.handle, 0, 10);
+      canlib.FlashLeds(me.handle, 1, 10);
+      resolve();
+    })
+    .catch(function(err) {
+      me.emit('error', err);
+      throw err;
+    });
+  }
+
   // Required function for cs-modbus GenericConnection
   isOpen() {
     return ((this.handle != undefined) &&

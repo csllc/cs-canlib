@@ -40,6 +40,7 @@
 #define CANRESETBUS_ARGC            (1)
 #define CANGETERRORTEXT_ARGC        (1)
 #define CANREADERRORCOUNTERS_ARGC   (1)
+#define KVFLASHLEDS_ARGC            (3)
 #define CANREQUESTCHIPSTATUS_ARGC   (1)
 #define CANSETACCEPTANCEFILTER_ARGC (4)
 #define CANENABLEEVENT_ARGC         (3)
@@ -289,6 +290,16 @@ napi_value canlib_canGetErrorText(napi_env env, napi_callback_info info);
 // - int handle
 // Returns an N-API object, and error is thrown upon failure
 napi_value canlib_canReadErrorCounters(napi_env env, napi_callback_info info);
+
+
+// Flash the LEDs on the adapter
+// Arguments passed through N-API:
+// - int handle
+// - int action
+// - int timeout
+// Returns canStatus from CANlib API call, wrapped in napi_value, and error is
+// thrown upon failure
+napi_value canlib_kvFlashLeds(napi_env env, napi_callback_info info);
 
 
 // Asynchronously request status from chip, which can be retreived using

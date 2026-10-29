@@ -28,7 +28,7 @@
 
 
 // Length of N-API module descriptor list, used in Init
-enum { descriptors_len = 26 };
+enum { descriptors_len = 27 };
 
 
 
@@ -98,6 +98,7 @@ napi_value Init(napi_env env, napi_value exports)
         DECLARE_NAPI_METHOD("SetLoopback", canlib_canSetLoopback),
         DECLARE_NAPI_METHOD("ClearErrorCounters", canlib_canClearErrorCounters),
         DECLARE_NAPI_METHOD("GetFlagText", canlib_canGetFlagText),
+        DECLARE_NAPI_METHOD("FlashLeds", canlib_kvFlashLeds),
     };
 
     status = napi_define_properties(env, exports, descriptors_len, descriptors);
@@ -1567,6 +1568,59 @@ napi_value canlib_canRequestChipStatus(napi_env env, napi_callback_info info)
     {
         napi_throw_error(env, canlibStatusLookup(canlibStatus),
                          "canlib_canReadErrorCounters: Error at canReadErrorCounters.");
+        return 0;
+    }
+
+    // Create an N-API value for the result and return it
+    napi_value result;
+    status = napi_create_uint32(env, canlibStatus, &result);
+    assert(status == napi_ok);
+
+    return result;
+}
+
+
+
+
+napi_value canlib_kvFlashLeds(napi_env env, napi_callback_info info)
+{
+    napi_status status = napi_generic_failure;
+
+    // Retrieve callback info and argument list
+    size_t argc = KVFLASHLEDS_ARGC;
+    napi_value argv[KVFLASHLEDS_ARGC];
+
+    status = napi_get_cb_info(env, info, &argc, argv, 0, 0);
+    assert(status == napi_ok);
+
+    if (argc != KVFLASHLEDS_ARGC)
+    {
+        napi_throw_type_error(env, 0, "Incorrect number of arguments.");
+        return 0;
+    }
+
+    // Retreive arguments
+    int32_t canlibHandle;
+    status = napi_get_value_int32(env, argv[0], &canlibHandle);
+    assert(status == napi_ok);
+
+    int32_t canlibAction;
+    status = napi_get_value_int32(env, argv[1], &canlibAction);
+    assert(status == napi_ok);
+
+    int32_t canlibTimeout;
+    status = napi_get_value_int32(env, argv[1], &canlibTimeout);
+    assert(status == napi_ok);
+
+    // Flash LEDs
+    canStatus canlibStatus;
+    canlibStatus = kvFlashLeds(canlibHandle, canlibAction, canlibTimeout);
+
+    // Throw error, if any
+    if (canlibStatus < 0)
+    {
+        napi_throw_error(env, canlibStatusLookup(canlibStatus),
+                         "canlib_kvFlashLeds: Error at kvFlashLeds.");
         return 0;
     }
 

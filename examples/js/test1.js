@@ -21,13 +21,14 @@ can.list()
       });
   })
   .then(() => {
-    can.write({ id: 0x10EF8001,
-                ext: true,
-                buf: Buffer.from([0x45, 0x00, 0x00, 0x04, 0x00, 0x00]) });
+    can.identify()
+    // can.write({ id: 0x10EF8001,
+    //             ext: true,
+    //             buf: Buffer.from([0x45, 0x00, 0x00, 0x04, 0x00, 0x00]) });
   })
-// .then(() => {
-//   can.close();
-// })
+.then(() => {
+  can.close();
+})
   .catch((err) => {
     console.error(err);
     can.close();
