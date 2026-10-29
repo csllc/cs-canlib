@@ -277,22 +277,31 @@ module.exports = class Canlib extends Duplex {
     if (me.handle === undefined) {
       throw new Error("CAN bus handle is undefined");
     } else {
+      // Drain the receive queue first. Only canlib.Read() is inside the
+      // try/catch: push() can emit 'data' synchronously, and an exception
+      // thrown by a 'data' listener must not be mistaken for a read error
+      // (that used to swallow the exception and leave messages in the queue).
+      let messages = [];
       for (;;) {
         try {
-          let read_obj = canlib.Read(me.handleThread);
-          me.push(canlibConsts.toMsg(read_obj)); // Emits 'data' event
+          messages.push(canlib.Read(me.handleThread));
         } catch(err) {
-          if (err.code == "No messages available") {
-            // No messages, so this event must have been signaled for another reason
-          } else {
-            console.error("_onData() error: " + err.code);
+          if (err.code != "No messages available") {
+            console.error("_onData() read error:", err);
           }
+          // Otherwise there are no more messages (or this event was signaled
+          // for another reason)
           break;
         }
       }
+
       // If status changed, the following will emit a 'status' event
       canlib.RequestChipStatus(me.handleThread);
       me.status.statusCode = canlib.ReadStatus(me.handleThread);
+
+      for (let read_obj of messages) {
+        me.push(canlibConsts.toMsg(read_obj)); // Emits 'data' event
+      }
     }
   }
 
