@@ -1,9 +1,8 @@
 'use strict';
 
-const binary = require('node-pre-gyp');
-const path = require('path');
-const canlib_path = binary.find(path.resolve(path.join(__dirname,'./package.json')));
-const canlib = require(canlib_path);
+// Load the native addon: prebuilds/<platform>-<arch>/ if a matching prebuild
+// is present, otherwise build/Release (or build/Debug)
+const canlib = require('node-gyp-build')(__dirname);
 
 const canlibConsts = require('./lib/canlib_consts');
 

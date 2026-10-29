@@ -8,7 +8,7 @@ This module uses native code through N-API and currently supports Windows only.
 
 ## Getting Started
 
-The following assumes that [NodeJS](https://nodejs.org) is already installed. This module was developed using Node v12.18.4 for Windows 10 x86_64.
+The following assumes that [NodeJS](https://nodejs.org) is already installed. This module supports Windows x86_64 only, and Node 24 or later is recommended. Prebuilt binaries are included in the npm package, so installing it does not require a compiler.
 
 To install this module, run:
 ```
@@ -18,7 +18,7 @@ npm install @csllc/cs-canlib
 The following is a sample script that opens the CAN port, writes a single message to the bus, and listens for and prints received messages from the bus.
 
 ```js
-const canlib = require("cs-canlib");
+const canlib = require("@csllc/cs-canlib");
 
 let can = new canlib({
   canRate: 250000,
@@ -213,51 +213,43 @@ Do not run any tests on a bus with active traffic, since receiving unexpected CA
 
 ### Build Environment Setup
 
-#### Windows 10 x86 64-bit
-    
- 1. Install NodeJS. Version 12.18.4 is known to work as of the time of writing. Ensure that `node` and `npm` are found when invoked through the Command Prompt. If not, add the appropriate paths to the user's `PATH` environment variable.
- 1. Install the `windows-build-tools` Node package by running the following in an **administrative** Command Prompt or PowerShell window:
-    - `npm install -g windows-build-tools`
- 1. Exit the administrative console after this completes and use a console with normal privileges for the rest of the setup
+#### Windows x86_64
+
+ 1. Install NodeJS 24 or later. Ensure that `node` and `npm` are found when invoked through the Command Prompt.
+ 1. Install the native build tools, either by checking "Automatically install the necessary tools" in the NodeJS installer, or manually:
+    - Visual Studio (or Visual Studio Build Tools) with the "Desktop development with C++" workload
+    - Python 3
  1. Clone the `cs-canlib` repository:
     `git clone https://github.com/csllc/cs-canlib`
  1. Install dependencies:
     - `cd cs-canlib\`
     - `npm install`
  1. Build:
-    - `node-gyp clean`
-    - `node-pre-gyp configure`
-    - `node-pre-gyp build`
+    - `npm run rebuild`
  1. Test:
     - `npm test`
- 1. Clean build directory: (optional; perform as necessary)
-    - `node-gyp clean`
-    
+
 #### Build Notes
 
-Depending on shell or executable path configuration, it may be necessary to use `npx` to execute `node-pre-gyp`.
+The module is loaded with [`node-gyp-build`](https://github.com/prebuild/node-gyp-build), which uses a prebuilt binary from `prebuilds/win32-x64/` if one is present and otherwise falls back to `build/Release/`. When working on the C code, delete the `prebuilds/` folder (if you made one) so that your local build is the one that gets loaded.
 
-If the test stage fails, useful error messages may be hidden by `mocha`. When tracking down a the cause of an error, running the example code directly, for example `node example/js/test.js`, may be helpful.
+The build copies the Kvaser `canlib32.dll` next to the compiled `cs_canlib.node`. Windows looks for the DLL in the addon's folder first, so the module works even if the Kvaser driver package has not installed its own copy.
+
+If the test stage fails, useful error messages may be hidden by `mocha`. When tracking down the cause of an error, running the example code directly, for example `node examples/js/dump.js`, may be helpful.
 
 It may also be helpful to recompile the module with `CANLIB_DEBUG` and `CANLIB_EVENT_DEBUG` defined to enable debugging messages.
 
+#### Editor Support
+
+A `compile_flags.txt` is included for [clangd](https://clangd.llvm.org/). It uses the Node-API headers from the `node-api-headers` dev dependency, so run `npm install` first.
+
 ## Distribution
 
-As part of the installation process, the platform-specific binary portion of the native addon is retrieved from a separate GitHub repository at [@csllc/cs-canlib-binding](https://github.com/csllc/cs-canlib-binding). This allows the `cs-canlib` module to be installed on machines that do not have a full development environment set up to build it from source.
+The module uses only Node-API, so a single binary works with every supported NodeJS version. The published npm package includes a prebuilt binary for Windows x86_64 in `prebuilds/win32-x64/`, together with `canlib32.dll`. On other platforms, or if the prebuilt binary is missing, `npm install` falls back to building from source.
 
-This package is configured such that `npm install` will attempt to download the pre-built binary first, and fall back onto building from source if that fails.
+To make the prebuilt binary locally:
 
-### Building and Packaging for Distribution
-
-After incrementing the package version number in this repository, the following commands can be used to generate a corresponding binary package for release.
-
- - `node-pre-gyp configure`
- - `node-pre-gyp build`
- - `node-pre-gyp package`
- 
-Depending on shell or executable path configuration, it may be necessary to use `npx` to execute the above commands.
-
-Afterwards, create a new release in [@csllc/cs-canlib-binding](https://github.com/csllc/cs-canlib-binding) using the same new version number and attach the `.tar.gz` file found in `build/stage/{version}/`.
+ - `npm run prebuildify`
 
 ## Functionality Limitations
 

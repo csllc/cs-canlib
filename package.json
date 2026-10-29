@@ -3,41 +3,50 @@
   "version": "0.1.9",
   "description": "CANlib module for NodeJS",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "lib/",
+    "src/",
+    "tools/",
+    "binding.gyp",
+    "prebuilds/",
+    "ext/canlib-win32-x64/include/",
+    "ext/canlib-win32-x64/lib/64/",
+    "ext/canlib-win32-x64/bin/64/"
+  ],
   "license": "MIT",
   "author": "cwalden@controls.com",
   "os": [
     "win32"
   ],
   "dependencies": {
-    "bindings": "~1.2.1",
-    "eslint": "^7.10.0",
-    "node-gyp": "^7.1.1",
-    "node-pre-gyp": "^0.15.0",
-    "stream": "0.0.2"
+    "node-gyp-build": "^4.8.0"
   },
   "devDependencies": {
     "@csllc/j1939": "^1.1.1",
     "can-usb-com": "^4.0.1",
     "chai": "^4.2.0",
     "chai-events": "0.0.3",
+    "eslint": "^7.10.0",
     "eslint-plugin-mocha": "^8.0.0",
     "mocha": "^8.2.1",
-    "node-api-headers": "^1.9.0"
+    "node-api-headers": "^1.9.0",
+    "node-gyp": "^11.0.0",
+    "prebuildify": "^6.0.0"
   },
   "scripts": {
-    "install": "node-pre-gyp install --fallback-to-build",
+    "install": "node-gyp-build",
+    "build": "node-gyp build",
+    "rebuild": "node-gyp rebuild",
+    "prebuildify": "prebuildify --napi && node tools/copy-dll.js",
     "test": "mocha test"
-  },
-  "binary": {
-    "module_name": "cs_canlib",
-    "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz",
-    "module_path": "./binding/{configuration}/{node_abi}-{platform}-{arch}/",
-    "host": "https://github.com/csllc/cs-canlib-binding/releases/download/",
-    "remote_path": "{version}"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/csllc/cs-canlib.git"
   },
-  "gypfile": true
+  "gypfile": true,
+  "publishConfig": {
+    "access": "public"
+  }
 }
