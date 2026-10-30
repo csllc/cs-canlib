@@ -47,7 +47,7 @@ function isDriverMissingError(err) {
   return DRIVER_MISSING_ERRORS.some((status) => {
     try {
       return err.code === canlib.GetErrorText(status);
-    } catch (e) {
+    } catch {
       return false;
     }
   });

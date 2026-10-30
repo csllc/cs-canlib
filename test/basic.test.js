@@ -6,7 +6,7 @@
 const CsCanlib = require('..');
 const chai = require('chai');
 const expect = chai.expect;
-const should = chai.should();
+chai.should(); // adds .should to all objects (used as can.should.emit)
 chai.use(require('chai-events'));
 
 const { Duplex } = require('stream');
