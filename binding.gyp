@@ -1,4 +1,9 @@
 {
+  "variables": {
+    # Kvaser CANlib SDK folder (see tools/canlib-sdk.js). The SDK is not part
+    # of this package; its license does not allow redistributing it.
+    "canlib_sdk": "<!(node tools/canlib-sdk.js)"
+  },
   "targets": [
     {
       "target_name": "cs_canlib",
@@ -13,30 +18,18 @@
         [
           "OS=='win'",
           {
-            # Kvaser CANlib SDK (64-bit)
+            # canlib32.dll itself is installed by the Kvaser driver package
             "include_dirs": [
-              "ext/canlib-win32-x64/include"
+              "<(canlib_sdk)/INC"
             ],
             "library_dirs": [
-              "ext/canlib-win32-x64/lib/64"
+              "<(canlib_sdk)/Lib/x64"
             ],
             "link_settings": {
               "libraries": [
                 "-lcanlib32"
               ]
-            },
-            # Put canlib32.dll next to the built .node file. Node loads addons
-            # with LOAD_WITH_ALTERED_SEARCH_PATH, so Windows finds the DLL in
-            # the addon's own folder first. (tools/copy-dll.js does the same
-            # for prebuilds/win32-x64/.)
-            "copies": [
-              {
-                "destination": "<(PRODUCT_DIR)",
-                "files": [
-                  "ext/canlib-win32-x64/bin/64/canlib32.dll"
-                ]
-              }
-            ]
+            }
           }
         ]
       ]

@@ -1,6 +1,6 @@
 -xc
 -Inode_modules/node-api-headers/include
--Iext/canlib-win32-x64/include
+-IC:/Program Files (x86)/Kvaser/Canlib/INC
 -DNODE_GYP_MODULE_NAME=cs_canlib
 -DBUILDING_NODE_EXTENSION
 -DWIN32

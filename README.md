@@ -10,6 +10,8 @@ This module uses native code through N-API and currently supports Windows only.
 
 The following assumes that [NodeJS](https://nodejs.org) is already installed. This module supports Windows x86_64 only, and Node 24 or later is recommended. Prebuilt binaries are included in the npm package, so installing it does not require a compiler.
 
+The Kvaser CANlib driver must also be installed ("Kvaser Drivers for Windows", from the [Kvaser downloads page](https://kvaser.com/download/)). It provides `canlib32.dll`, which this module uses but does not include. Without the driver, the module still loads, but `list()` returns no channels and opening a channel fails with an error whose `code` is `ERR_CANLIB_NOT_INSTALLED`.
+
 To install this module, run:
 ```
 npm install @csllc/cs-canlib
@@ -219,6 +221,7 @@ Do not run any tests on a bus with active traffic, since receiving unexpected CA
  1. Install the native build tools, either by checking "Automatically install the necessary tools" in the NodeJS installer, or manually:
     - Visual Studio (or Visual Studio Build Tools) with the "Desktop development with C++" workload
     - Python 3
+ 1. Install the [Kvaser CANlib SDK](https://kvaser.com/developer/canlib-sdk) (which provides the header files and import library needed to build) and the Kvaser driver (which provides `canlib32.dll`). The build looks for the SDK in its default location, `C:\Program Files (x86)\Kvaser\Canlib`; if it is installed elsewhere, set the `KVASER_CANLIB_SDK` environment variable to its folder. Release builds use CANlib SDK 5.33, but any version from 5.33 on should work.
  1. Clone the `cs-canlib` repository:
     `git clone https://github.com/csllc/cs-canlib`
  1. Install dependencies:
@@ -233,19 +236,17 @@ Do not run any tests on a bus with active traffic, since receiving unexpected CA
 
 The module is loaded with [`node-gyp-build`](https://github.com/prebuild/node-gyp-build), which uses a prebuilt binary from `prebuilds/win32-x64/` if one is present and otherwise falls back to `build/Release/`. When working on the C code, delete the `prebuilds/` folder (if you made one) so that your local build is the one that gets loaded.
 
-The build copies the Kvaser `canlib32.dll` next to the compiled `cs_canlib.node`. Windows looks for the DLL in the addon's folder first, so the module works even if the Kvaser driver package has not installed its own copy.
-
 If the test stage fails, useful error messages may be hidden by `mocha`. When tracking down the cause of an error, running the example code directly, for example `node examples/js/dump.js`, may be helpful.
 
 It may also be helpful to recompile the module with `CANLIB_DEBUG` and `CANLIB_EVENT_DEBUG` defined to enable debugging messages.
 
 #### Editor Support
 
-A `compile_flags.txt` is included for [clangd](https://clangd.llvm.org/). It uses the Node-API headers from the `node-api-headers` dev dependency, so run `npm install` first.
+A `compile_flags.txt` is included for [clangd](https://clangd.llvm.org/). It uses the Node-API headers from the `node-api-headers` dev dependency, so run `npm install` first, and the CANlib SDK headers from the SDK's default location (edit the `-I` line if the SDK is installed elsewhere).
 
 ## Distribution
 
-The module uses only Node-API, so a single binary works with every supported NodeJS version. The published npm package includes a prebuilt binary for Windows x86_64 in `prebuilds/win32-x64/`, together with `canlib32.dll`. On other platforms, or if the prebuilt binary is missing, `npm install` falls back to building from source.
+The module uses only Node-API, so a single binary works with every supported NodeJS version. The published npm package includes a prebuilt binary for Windows x86_64 in `prebuilds/win32-x64/`. If the prebuilt binary is missing, `npm install` falls back to building from source, which requires the build environment described above, including the CANlib SDK.
 
 To make the prebuilt binary locally:
 
@@ -259,7 +260,7 @@ Releases are built and published by the GitHub Actions workflow in `.github/work
  1. `npm version patch` (or `minor` / `major`), which updates `package.json` and creates the tag `vX.Y.Z`
  1. `git push --follow-tags`
 
-The workflow builds the Windows x86_64 binary, checks that it loads, and publishes the package to npm with the binary and `canlib32.dll` included. Publishing uses npm trusted publishing, so no npm token is stored in GitHub; the package's trusted publisher on npmjs.com must name this repository and the workflow file `release.yml`.
+The workflow downloads a pinned version of the CANlib SDK from Kvaser (checking its SHA256 hash), builds the Windows x86_64 binary, checks that it loads, and publishes the package to npm with the binary included. Publishing uses npm trusted publishing, so no npm token is stored in GitHub; the package's trusted publisher on npmjs.com must name this repository and the workflow file `release.yml`.
 
 ## Functionality Limitations
 
@@ -269,3 +270,12 @@ The following have not been tested due to hardware availability.
 	
  - All FD functionality
  - Enumerating more than one Kvaser device connected to a computer
+
+## Licensing and Dependencies
+
+This project is licensed under the MIT license - see the [LICENSE](LICENSE) file for details.
+
+It uses the following third-party components, which are not included in this repository or in the npm package:
+
+* [Kvaser CANlib SDK](https://kvaser.com/developer/canlib-sdk) - Copyright KVASER AB, Sweden. The module is compiled against the SDK's header files and import library, which are subject to Kvaser's license for the SDK and are not redistributed here. Install the SDK from Kvaser to build the module from source.
+* Kvaser CANlib driver - Copyright KVASER AB, Sweden. Provides `canlib32.dll` at runtime. Install it from Kvaser; it is not distributed with this package.

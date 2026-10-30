@@ -7,12 +7,9 @@
     "index.js",
     "lib/",
     "src/",
-    "tools/",
+    "tools/canlib-sdk.js",
     "binding.gyp",
-    "prebuilds/",
-    "ext/canlib-win32-x64/include/",
-    "ext/canlib-win32-x64/lib/64/",
-    "ext/canlib-win32-x64/bin/64/"
+    "prebuilds/"
   ],
   "license": "MIT",
   "author": "cwalden@controls.com",
@@ -37,7 +34,7 @@
     "install": "node-gyp-build",
     "build": "node-gyp build",
     "rebuild": "node-gyp rebuild",
-    "prebuildify": "prebuildify --napi && node tools/copy-dll.js",
+    "prebuildify": "prebuildify --napi",
     "test": "mocha test",
     "lint": "eslint ."
   },

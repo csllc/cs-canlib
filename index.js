@@ -1,8 +1,29 @@
 'use strict';
 
 // Load the native addon: prebuilds/<platform>-<arch>/ if a matching prebuild
-// is present, otherwise build/Release (or build/Debug)
-const canlib = require('node-gyp-build')(__dirname);
+// is present, otherwise build/Release (or build/Debug).
+//
+// The addon links against canlib32.dll, which is installed by the Kvaser
+// driver package (it is not distributed with this module). If the driver is
+// not installed, Windows can't load the addon. In that case, the module still
+// loads so that callers probing for several kinds of CAN adapter keep working:
+// list() resolves to an empty list, and anything else throws loadError.
+let canlib;
+let loadError = null;
+try {
+  canlib = require('node-gyp-build')(__dirname);
+} catch (err) {
+  if (process.platform !== 'win32' || err.code !== 'ERR_DLOPEN_FAILED') {
+    throw err;
+  }
+  loadError = new Error('cs-canlib: could not load canlib32.dll. Install the ' +
+    'Kvaser CANlib driver ("Kvaser Drivers for Windows", ' +
+    'https://kvaser.com/download/).', { cause: err });
+  loadError.code = 'ERR_CANLIB_NOT_INSTALLED';
+  canlib = new Proxy({}, {
+    get() { throw loadError; },
+  });
+}
 
 const canlibConsts = require('./lib/canlib_consts');
 
@@ -98,12 +119,19 @@ module.exports = class Canlib extends Duplex {
   // Returns a promise that resolves to a list of available CAN channels
   // These channels get passed to this.open() and ultimately can.EnableEvent()
   // Rejects if CANlib reports an error, unless the error means the Kvaser
-  // driver is not installed, in which case it resolves to an empty list.
+  // driver is not installed (or canlib32.dll could not be loaded at all), in
+  // which case it resolves to an empty list.
   list() {
     return new Promise(function(resolve) {
       if (process.platform != "win32") {
         // CANlib is only supported on Windows; on any other platform, return
         // an empty channel list in an attempt to fail gracefully
+        resolve([]);
+        return;
+      }
+
+      // Kvaser driver not installed
+      if (loadError) {
         resolve([]);
         return;
       }
