@@ -8,6 +8,30 @@ const canlibConsts = require('./lib/canlib_consts');
 
 const { Duplex } = require('stream');
 
+// CANlib error codes (see canstat.h) that mean the Kvaser driver is not
+// installed or cannot be loaded. list() reports no channels for these instead
+// of failing, so that callers probing for several kinds of CAN adapter still
+// work on machines without the Kvaser driver.
+const DRIVER_MISSING_ERRORS = [
+  -12, // canERR_DRIVER
+  -16, // canERR_DYNALOAD
+  -17, // canERR_DYNALIB
+  -18, // canERR_DYNAINIT
+  -23, // canERR_DRIVERLOAD
+];
+
+// Errors thrown by the native module carry CANlib's error text in err.code,
+// so compare against the text for each driver-missing status
+function isDriverMissingError(err) {
+  return DRIVER_MISSING_ERRORS.some((status) => {
+    try {
+      return err.code === canlib.GetErrorText(status);
+    } catch (e) {
+      return false;
+    }
+  });
+}
+
 // Default configuration used unless overridden by caller
 const DEFAULT_OPTIONS = {
   canRate: 250000,
@@ -73,40 +97,40 @@ module.exports = class Canlib extends Duplex {
 
   // Returns a promise that resolves to a list of available CAN channels
   // These channels get passed to this.open() and ultimately can.EnableEvent()
+  // Rejects if CANlib reports an error, unless the error means the Kvaser
+  // driver is not installed, in which case it resolves to an empty list.
   list() {
     return new Promise(function(resolve) {
+      if (process.platform != "win32") {
+        // CANlib is only supported on Windows; on any other platform, return
+        // an empty channel list in an attempt to fail gracefully
+        resolve([]);
+        return;
+      }
+
       // Initialize CAN library
       canlib.InitializeLibrary();
 
-      if (process.platform == "win32") {
-        // If running on Windows, get channel data
-        let channelInfo;
-        try {
-          channelInfo = canlib.ChannelInfo();
-        } catch(e) {
-          // Kvaser driver not installed or other problem
-          channelInfo = [];
+      // Get channel data. An exception thrown here rejects the promise.
+      let channels;
+      try {
+        channels = canlib.ChannelInfo();
+      } catch(err) {
+        if (!isDriverMissingError(err)) {
+          throw err;
         }
-        resolve(channelInfo);
-      } else {
-        // If running on any other platform, we return an empty channel list in
-        // an attempt to fail gracefully
-        resolve([]);
+        channels = [];
       }
-      
-    })
-      .then(function(channels) {
-        // For compatibility, create a new property 'path' that is the
-        // identifier for the CAN device in the system and can be passed
-        // to the open() method
-        for (var idx in channels) {
-          channels[idx].path = channels[idx].channel;
-        }
-        return channels;
-      })
-      .catch(function(err) {
-        throw err;
-      });
+
+      // For compatibility, create a new property 'path' that is the
+      // identifier for the CAN device in the system and can be passed
+      // to the open() method
+      for (let channel of channels) {
+        channel.path = channel.channel;
+      }
+
+      resolve(channels);
+    });
   }
 
   open(channel) { 
@@ -142,8 +166,13 @@ module.exports = class Canlib extends Duplex {
         
         // Enable data event
         // - This opens a second handle to the channel and takes it on-bus
+        // The native code calls this from a Node-API thread-safe function.
+        // Defer the actual work with setImmediate() so that an exception
+        // thrown by a 'data' listener is reported as a normal uncaught
+        // exception, instead of being swallowed by Node-API with a DEP0168
+        // warning.
         me.handleThread = canlib.EnableEvent(me.channel, me.flags, function() {
-          me.emit('_data');
+          setImmediate(() => me.emit('_data'));
         });
 
         // Set loopback for the event thread's handle

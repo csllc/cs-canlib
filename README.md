@@ -251,6 +251,16 @@ To make the prebuilt binary locally:
 
  - `npm run prebuildify`
 
+### Releasing
+
+Releases are built and published by the GitHub Actions workflow in `.github/workflows/release.yml`, which runs when a version tag is pushed:
+
+ 1. Run the tests locally with a Kvaser adapter connected: `npm test` (the CI runners have no CAN hardware, so they only check that the binary builds and loads)
+ 1. `npm version patch` (or `minor` / `major`), which updates `package.json` and creates the tag `vX.Y.Z`
+ 1. `git push --follow-tags`
+
+The workflow builds the Windows x86_64 binary, checks that it loads, and publishes the package to npm with the binary and `canlib32.dll` included. Publishing uses npm trusted publishing, so no npm token is stored in GitHub; the package's trusted publisher on npmjs.com must name this repository and the workflow file `release.yml`.
+
 ## Functionality Limitations
 
 ### Untested Functionality

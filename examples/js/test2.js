@@ -1,9 +1,9 @@
 'use strict';
 
-const binary = require('node-pre-gyp');
 const path = require('path');
-const canlib_path = binary.find(path.resolve(path.join(__dirname,'../../package.json')));
-const canlib = require(canlib_path);
+
+// Load the native addon directly (not the stream wrapper in index.js)
+const canlib = require('node-gyp-build')(path.join(__dirname, '../..'));
 
 canlib.InitializeLibrary();
 

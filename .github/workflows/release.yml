@@ -1,0 +1,126 @@
+# Build the prebuilt binary for win32-x64, then publish the package to npm
+# with the binary (and Kvaser's canlib32.dll) included.
+#
+# Triggered by pushing a version tag, e.g.:
+#   npm version patch      # bumps package.json and creates tag vX.Y.Z
+#   git push --follow-tags
+#
+# Publishing uses npm trusted publishing (OIDC), so no npm token is stored in
+# GitHub. The trusted publisher on npmjs.com must name this repository and the
+# workflow file "release.yml".
+#
+# The functional tests need a Kvaser adapter on a live CAN bus, so they are not
+# run here; run `npm test` locally before tagging a release.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build win32-x64
+    # Pinned rather than windows-latest so a runner image change can't
+    # silently change the compiler. node-gyp 12.1+ supports both Visual
+    # Studio 2022 and 2026.
+    runs-on: windows-2025
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # --ignore-scripts skips the package's own install script, which would
+      # otherwise compile the module (prebuildify compiles it below)
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts
+
+      # Builds prebuilds/win32-x64/*.node and copies canlib32.dll next to it
+      - name: Build prebuilt binary
+        run: npm run prebuildify
+
+      # Load the prebuilt binary (not build/Release) to check that it links
+      # against canlib32.dll and initializes, and that the expected functions
+      # are exported. The Kvaser driver is not installed on the runner, so
+      # list() is only reported, not checked.
+      - name: Check that the binary loads
+        shell: bash
+        run: |
+          rm -rf build
+          ls -l prebuilds/*/
+          test -f prebuilds/win32-x64/canlib32.dll
+          node -e "
+            const native = require('node-gyp-build')(process.cwd());
+            for (const fn of ['InitializeLibrary', 'ChannelInfo', 'OpenChannel', 'Read', 'Write', 'EnableEvent', 'FlashLeds']) {
+              if (typeof native[fn] !== 'function') throw new Error(fn + ' not exported');
+            }
+            native.InitializeLibrary();
+            const Canlib = require('.');
+            console.log('OK:', Object.keys(native).length, 'native functions');
+            new Canlib().list().then(
+              (channels) => console.log('list() without Kvaser driver:', channels),
+              (err) => console.log('list() without Kvaser driver rejected:', err.code, '-', err.message));
+          "
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: prebuilds-win32-x64
+          path: prebuilds/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to npm
+    needs: build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      id-token: write   # required for npm trusted publishing
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Check that the tag matches package.json
+        run: |
+          VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $VERSION"
+            exit 1
+          fi
+
+      - name: Download binary
+        uses: actions/download-artifact@v8
+        with:
+          pattern: prebuilds-*
+          path: prebuilds
+          merge-multiple: true
+
+      - name: List package contents
+        run: |
+          ls -lR prebuilds
+          test -f prebuilds/win32-x64/canlib32.dll
+          npm pack --dry-run
+
+      - name: Publish
+        run: npm publish

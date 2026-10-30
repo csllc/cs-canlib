@@ -2,7 +2,7 @@
  * Implements a pingpong test using 2 CAN-USB-COM modules
  *
  * Note you must
- *   npm install can-usb-com
+ *   npm install --no-save can-usb-com @csllc/j1939
  * in order for this to work.to
  *
  * The two devices must be connected together and properly terminated (so that
