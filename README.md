@@ -2,7 +2,7 @@
 
 This module provides a NodeJS interface to the [Kvaser](https://www.kvaser.com/) [Leaf Light v2](https://www.kvaser.com/product/kvaser-leaf-light-hs-v2/) adapter, and possibly others that are supported by the [CANlib library](https://www.kvaser.com/developer/canlib-sdk/).
 
-This module is meant to serve as a drop-in replacement for `can-usb-com`, allowing Kvaser adapters to be used in place of [GridConnect CAN-USB-COM](https://www.gridconnect.com/products/usb-can-interface-can-usb-com).
+This module is meant to serve as a drop-in replacement for `@csllc/can-usb-com`, allowing Kvaser adapters to be used in place of [GridConnect CAN-USB-COM](https://www.gridconnect.com/products/usb-can-interface-can-usb-com).
 
 This module uses native code through N-API and currently supports Windows only.
 
@@ -209,7 +209,7 @@ Before updating or modifying this package, please
 
 In order to run unit tests (`npm test`), at least one Kvaser device must be connected to the computer.
 
-The `pingpong` test is currently configured to use `cs-canlib` for one adapter, and `can-usb-com` for the other. These adapters must be connected via a properly terminated bus.
+The `pingpong` test is currently configured to use `@csllc/cs-canlib` for one adapter, and `@csllc/can-usb-com` for the other. These adapters must be connected via a properly terminated bus.
 
 Do not run any tests on a bus with active traffic, since receiving unexpected CAN packets may confuse the tests.
 
