@@ -1,6 +1,6 @@
 {
   "name": "@csllc/cs-canlib",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "CANlib module for NodeJS",
   "main": "index.js",
   "files": [
