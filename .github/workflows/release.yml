@@ -1,5 +1,5 @@
 # Build the prebuilt binary for win32-x64, then publish the package to npm
-# with the binary (and Kvaser's canlib32.dll) included.
+# with the binary included.
 #
 # Triggered by pushing a version tag, e.g.:
 #   npm version patch      # bumps package.json and creates tag vX.Y.Z
@@ -11,6 +11,10 @@
 #
 # The functional tests need a Kvaser adapter on a live CAN bus, so they are not
 # run here; run `npm test` locally before tagging a release.
+#
+# The module is built against Kvaser's CANlib SDK, which is downloaded from
+# Kvaser during the build. The SDK's license does not allow redistributing it,
+# so none of its files (including canlib32.dll) go into the package.
 
 name: Release
 
@@ -21,6 +25,15 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # Pinned Kvaser CANlib SDK version. Building against an older SDK keeps the
+  # module compatible with any Kvaser driver of that version or newer. The
+  # SHA256 was taken from a download whose MD5 matched the one Kvaser
+  # publishes (ae51beb2147e328797a1b27459b014b6).
+  CANLIB_SDK_VERSION: 5.33.212
+  CANLIB_SDK_FILE: canlib_5_33_212.exe
+  CANLIB_SDK_SHA256: 0e9fdfea80df4d8aba9cb1785cb2f4ad0f30dc107a28c6e11c8f1f9248409ccf
 
 jobs:
   build:
@@ -39,25 +52,52 @@ jobs:
         with:
           node-version: 24
 
+      # The installer's silent mode ignores the install folder, so unpack it
+      # with 7-Zip (preinstalled on the runner) instead. binding.gyp finds the
+      # SDK through KVASER_CANLIB_SDK.
+      - name: Download and unpack Kvaser CANlib SDK
+        shell: pwsh
+        run: |
+          $installer = "$env:RUNNER_TEMP\$env:CANLIB_SDK_FILE"
+          $sdk = "$env:RUNNER_TEMP\canlib-sdk"
+          Invoke-WebRequest -Uri "https://pim.kvaser.com/var/assets/Product_Resources/7330130980150/$env:CANLIB_SDK_VERSION/$env:CANLIB_SDK_FILE" -OutFile $installer
+          $sha256 = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+          if ($sha256 -ne $env:CANLIB_SDK_SHA256) { throw "SHA256 mismatch: got $sha256" }
+          7z x $installer "-o$sdk" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "7-Zip failed with exit code $LASTEXITCODE" }
+          foreach ($f in 'INC\canlib.h', 'Lib\x64\canlib32.lib', 'bin_x64\canlib32.dll') {
+            if (-not (Test-Path "$sdk\$f")) { throw "$f not found in the SDK" }
+          }
+          "KVASER_CANLIB_SDK=$sdk" >> $env:GITHUB_ENV
+
       # --ignore-scripts skips the package's own install script, which would
       # otherwise compile the module (prebuildify compiles it below)
       - name: Install npm dependencies
         run: npm ci --ignore-scripts
 
-      # Builds prebuilds/win32-x64/*.node and copies canlib32.dll next to it
       - name: Build prebuilt binary
         run: npm run prebuildify
 
-      # Load the prebuilt binary (not build/Release) to check that it links
-      # against canlib32.dll and initializes, and that the expected functions
-      # are exported. The Kvaser driver is not installed on the runner, so
-      # list() is only reported, not checked.
+      # Load the prebuilt binary (not build/Release). The Kvaser driver is not
+      # installed on the runner, so first check that the module still loads
+      # without canlib32.dll and reports no channels. Then put the SDK's copy
+      # of canlib32.dll on PATH (for this check only) and check that the
+      # binary links and initializes, and that the expected functions are
+      # exported.
       - name: Check that the binary loads
         shell: bash
         run: |
           rm -rf build
           ls -l prebuilds/*/
-          test -f prebuilds/win32-x64/canlib32.dll
+          if ls prebuilds/*/*.dll 2>/dev/null; then echo "Unexpected DLL in prebuilds"; exit 1; fi
+          node -e "
+            const Canlib = require('.');
+            new Canlib().list().then((channels) => {
+              if (channels.length !== 0) throw new Error('expected no channels');
+              console.log('OK: loads without canlib32.dll; list() =', channels);
+            });
+          "
+          export PATH="$(cygpath -u "$KVASER_CANLIB_SDK")/bin_x64:$PATH"
           node -e "
             const native = require('node-gyp-build')(process.cwd());
             for (const fn of ['InitializeLibrary', 'ChannelInfo', 'OpenChannel', 'Read', 'Write', 'EnableEvent', 'FlashLeds']) {
@@ -67,8 +107,8 @@ jobs:
             const Canlib = require('.');
             console.log('OK:', Object.keys(native).length, 'native functions');
             new Canlib().list().then(
-              (channels) => console.log('list() without Kvaser driver:', channels),
-              (err) => console.log('list() without Kvaser driver rejected:', err.code, '-', err.message));
+              (channels) => console.log('list() with canlib32.dll but no driver:', channels),
+              (err) => console.log('list() with canlib32.dll but no driver rejected:', err.code, '-', err.message));
           "
 
       - name: Upload binary
@@ -119,8 +159,11 @@ jobs:
       - name: List package contents
         run: |
           ls -lR prebuilds
-          test -f prebuilds/win32-x64/canlib32.dll
           npm pack --dry-run
+          if npm pack --dry-run --json | grep -i -E '"path": *"[^"]*\.(dll|lib|h)"' | grep -v -E '"src/'; then
+            echo "Kvaser SDK files must not be published"
+            exit 1
+          fi
 
       - name: Publish
         run: npm publish
